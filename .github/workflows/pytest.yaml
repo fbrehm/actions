@@ -1,0 +1,27 @@
+---
+
+name: Executing Python tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      python_version:
+        required: true
+        type: string
+        description: The Python version to use for testing
+
+jobs:
+  test:
+    container: python:${{ inputs.python_version }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Show Environment
+        run: python --version
+      - uses: ./.github/actions/prepare-debian-container
+      - uses: ./.github/actions/install-pip-modules
+      - name: Install PyTest with pip
+        run: |
+          pip install --upgrade --upgrade-strategy eager pytest
+          pip list --format columns
+      - name: Executing PyTest
+        run: pytest --verbose
