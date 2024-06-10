@@ -31,13 +31,19 @@ jobs:
     name: Executing Linters
     container: python:3.12
     steps:
-      - uses: actions/checkout@v4
-      - uses: fbrehm/prepare-debian-container@main
+      - name: Check out sources
+        uses: actions/checkout@v4
+      - name: Preparing the Debian container
+        uses: fbrehm/prepare-debian-container@main
         with:
           manage_locales: false
-      - uses: fbrehm/github-install-pip-modules@main
+      - name: Installin PIP modules and linter tools
+        uses: fbrehm/github-install-pip-modules@main
         with:
           install_linter_tools: true
+      - name: Show Environment
+        shell: bash
+        run: env
       - name: Execute Yamllint
         run: yamllint workflows .github
 
