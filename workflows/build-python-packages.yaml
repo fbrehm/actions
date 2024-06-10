@@ -6,7 +6,8 @@ name: "Building OS packages of a Python source package."
 on:
   workflow_call:
     inputs:
-      debian_email: 'The mail address of the user, which will be used to update debian/chagelog.'
+      debian_email:
+        description: 'The mail address of the user, which will be used to update debian/chagelog.'
         type: string
         default: 'frank@brehm-online.com'
       debian_fullname:
@@ -64,7 +65,7 @@ jobs:
         uses: fbrehm/prepare-debian-container@main
         with:
           manage_locales: ${{ inputs.has_i18n }}
-          additional_locales: 
+          additional_locales: ${{ matrix.language }}
       - name: Installing PIP modules and linter tools
         uses: fbrehm/github-install-pip-modules@main
         with:
