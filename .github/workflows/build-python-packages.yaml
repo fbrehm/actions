@@ -15,10 +15,10 @@ on:
         description: 'A human readable name of the user, which will be used to update debian/chagelog.'
         type: string
         default: 'Frank Brehm'
-#      has_i18n:
-#        description: 'Does the package support localisation and internationalisation?'
-#        type: boolean
-#        default: true
+      has_i18n:
+        description: 'Does the package support localisation and internationalisation?'
+        type: boolean
+        default: true
 #      languages:
 #        description: 'A list of languages, which will be supported, if has_i18n is true.'
 #        default:
