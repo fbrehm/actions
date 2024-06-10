@@ -184,7 +184,7 @@ jobs:
         run: |
           PATHS_TO_CHECK="${LIBDIR}"
           if [[ -d "bin" ]] ; then
-            PATHS_TO_CHECK+=" bin/"
+            PATHS_TO_CHECK+=" bin/*"
           fi
           if [[ -f setup.py ]] ; then
             PATHS_TO_CHECK+=" setup.py"
