@@ -127,7 +127,7 @@ jobs:
         with:
           install_linter_tools: true
 
-      - name: "Checking validity of libdir '${LIBDIR}'."
+      - name: Checking validity of libdir ${[ inputs.libdir }}.
         shell: bash
         run: |
           echo -e -n "\nChecking for directory '${LIBDIR}': "
