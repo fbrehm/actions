@@ -141,6 +141,7 @@ jobs:
             echo "Python package index file '${INDEX_FILE}' does not exists." >&2
             exit 6
           fi
+          echo "ok."
 
       - name: "Checking module version against tag."
         shell: bash
@@ -191,7 +192,7 @@ jobs:
           if [[ -d test ]] ; then
             PATHS_TO_CHECK+=" test"
           fi
-          if [[ -n "${ADDITIONAL_FILES_FLAKE8}" ; then
+          if [[ -n "${ADDITIONAL_FILES_FLAKE8}" ]] ; then
             PATHS_TO_CHECK+=" ${ADDITIONAL_FILES_FLAKE8}"
           fi
           echo "Executing flake8 on ${PATHS_TO_CHECH} ..."
