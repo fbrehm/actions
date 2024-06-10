@@ -56,7 +56,7 @@ jobs:
 
   ###########################
   test:
-    name: Exec Python-${{ matrix,python_version }} tests on ${{ matrix.language }}
+    name: Exec Python-${{ matrix.python_version }} tests on ${{ matrix.language }}
     runs-on: ubuntu-latest
     needs: define-test-matrix
     strategy:
