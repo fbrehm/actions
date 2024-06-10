@@ -63,7 +63,7 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJSON(needs.define-test-matrix.outputs.matrix) }}
       max-parallel: 5
-    container: python:${{ matrix,python_version }}
+    container: python:${{ matrix.python_version }}
     env:
       LANG: ${{ matrix.language }}
       LANGUAGE: ${{ matrix.language }}
