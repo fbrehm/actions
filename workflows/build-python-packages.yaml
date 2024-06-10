@@ -2,6 +2,7 @@
 
 name: "Building OS packages of a Python source package."
 
+################################################################################
 # yamllint disable-line rule:truthy
 on:
   workflow_call:
@@ -35,6 +36,12 @@ on:
             - '3.11'
             - '3.12'
 
+################################################################################
+env:
+  DEBFULLNAME: ${{ inputs.debian_fullname }}
+  DEBEMAIL: ${{ inputs.debian_email }}
+
+################################################################################
 jobs:
 
   ###########################
