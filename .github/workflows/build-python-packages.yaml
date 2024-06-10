@@ -24,10 +24,9 @@ on:
         type: string
         default: '["de_DE.UTF-8", "en_US.UTF-8"]'
       test_python_versions:
-        description:
-          description: 'A list of Python versions, for which the package should be tested.'
-          type: string
-          default: '["3.6", "3.7", "3.8", "3.9", "3.10", "3.11", "3.12"]'
+        description: 'A list of Python versions, for which the package should be tested.'
+        type: string
+        default: '["3.6", "3.7", "3.8", "3.9", "3.10", "3.11", "3.12"]'
 
 ################################################################################
 env:
