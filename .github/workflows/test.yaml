@@ -32,10 +32,10 @@ jobs:
     container: python:3.12
     steps:
       - uses: actions/checkout@v4
-      - uses: ./.github/actions/prepare-debian-container
+      - uses: fbrehm/prepare-debian-container@main
         with:
           manage_locales: false
-      - uses: ./.github/actions/install-pip-modules
+      - uses: fbrehm/github-install-pip-modules@main
         with:
           install_linter_tools: true
       - name: Execute Yamllint
