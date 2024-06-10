@@ -37,13 +37,13 @@ jobs:
         uses: fbrehm/prepare-debian-container@main
         with:
           manage_locales: false
-      - name: Installin PIP modules and linter tools
+      - name: Installing PIP modules and linter tools
         uses: fbrehm/github-install-pip-modules@main
         with:
           install_linter_tools: true
       - name: Show Environment
         shell: bash
-        run: env
+        run: env | sort
       - name: Execute Yamllint
         run: yamllint workflows .github
 
