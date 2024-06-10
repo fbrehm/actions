@@ -48,14 +48,14 @@ jobs:
     name: Defining the Test matrix
     runs-on: ubuntu-latest
     env:
-      LANGS: ${{ github.event.inputs.languages }}
+      LANGS: ${{ inputs.languages }}
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
       - id: set-matrix
         shell: bash
         run: >
-          echo "matrix={\"language\": ${ENV}}" >> ${GITHUB_OUTPUT}
+          echo "matrix={\"language\": ${LANGS}}" >> ${GITHUB_OUTPUT}
           echo -n "Using Matrix: "
           cat ${GITHUB_OUTPUT}
 
