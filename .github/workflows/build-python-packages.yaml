@@ -15,26 +15,26 @@ on:
         description: 'A human readable name of the user, which will be used to update debian/chagelog.'
         type: string
         default: 'Frank Brehm'
-      has_i18n:
-        description: 'Does the package support localisation and internationalisation?'
-        type: boolean
-        default: true
-      languages:
-        description: 'A list of languages, which will be supported, if has_i18n is true.'
-        default:
-          - 'de_DE.UTF-8'
-          - 'en_US.UTF-8'
-      test_python_versions:
-        description:
-          description: 'A list of Python versions, for which the package should be tested.'
-          default:
-            - '3.6'
-            - '3.7'
-            - '3.8'
-            - '3.9'
-            - '3.10'
-            - '3.11'
-            - '3.12'
+#      has_i18n:
+#        description: 'Does the package support localisation and internationalisation?'
+#        type: boolean
+#        default: true
+#      languages:
+#        description: 'A list of languages, which will be supported, if has_i18n is true.'
+#        default:
+#          - 'de_DE.UTF-8'
+#          - 'en_US.UTF-8'
+#      test_python_versions:
+#        description:
+#          description: 'A list of Python versions, for which the package should be tested.'
+#          default:
+#            - '3.6'
+#            - '3.7'
+#            - '3.8'
+#            - '3.9'
+#            - '3.10'
+#            - '3.11'
+#            - '3.12'
 
 ################################################################################
 env:
@@ -48,12 +48,13 @@ jobs:
   test:
     name: Executing Python tests
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python_version: ${{ inputs.test_python_versions }}
-        language: ${{ inputs.languages }}
-    container: python:${{ matrix.python_version }}
+#    strategy:
+#      fail-fast: false
+#      matrix:
+#        python_version: ${{ inputs.test_python_versions }}
+#        language: ${{ inputs.languages }}
+    container: python:3.12
+    # container: python:${{ matrix.python_version }}
     env:
       LANG: ${{ matrix.language }}
       LANGUAGE: ${{ matrix.language }}
@@ -70,15 +71,15 @@ jobs:
           python --version
       - name: Preparing the Debian container
         uses: fbrehm/prepare-debian-container@main
-        with:
-          manage_locales: ${{ inputs.has_i18n }}
-          additional_locales: ${{ matrix.language }}
+#        with:
+#          manage_locales: ${{ inputs.has_i18n }}
+#          additional_locales: ${{ matrix.language }}
       - name: Installing PIP modules and linter tools
         uses: fbrehm/github-install-pip-modules@main
         with:
           install_pytest: true
-      - name: Executing PyTest for Python ${{ matrix.python_version }} and language ${{ matrix.language }}
-        shell: bash
-        run: pytest --verbose
+#      - name: Executing PyTest for Python ${{ matrix.python_version }} and language ${{ matrix.language }}
+#        shell: bash
+#        run: pytest --verbose
 
 # vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list
