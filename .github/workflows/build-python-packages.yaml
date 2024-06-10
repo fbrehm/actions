@@ -19,11 +19,10 @@ on:
         description: 'Does the package support localisation and internationalisation?'
         type: boolean
         default: true
-#      languages:
-#        description: 'A list of languages, which will be supported, if has_i18n is true.'
-#        default:
-#          - 'de_DE.UTF-8'
-#          - 'en_US.UTF-8'
+      languages:
+        description: 'A list of languages, which will be supported, if has_i18n is true.'
+        type: string
+        default: '["de_DE.UTF-8", "en_US.UTF-8"]'
 #      test_python_versions:
 #        description:
 #          description: 'A list of Python versions, for which the package should be tested.'
@@ -48,11 +47,11 @@ jobs:
   test:
     name: Executing Python tests
     runs-on: ubuntu-latest
-#    strategy:
-#      fail-fast: false
-#      matrix:
+    strategy:
+      fail-fast: false
+      matrix:
 #        python_version: ${{ inputs.test_python_versions }}
-#        language: ${{ inputs.languages }}
+        language: ${{ fromJSON(github.event.inputs.languages) }}
     container: python:3.12
     # container: python:${{ matrix.python_version }}
     env:
@@ -71,9 +70,9 @@ jobs:
           python --version
       - name: Preparing the Debian container
         uses: fbrehm/prepare-debian-container@main
-#        with:
-#          manage_locales: ${{ inputs.has_i18n }}
-#          additional_locales: ${{ matrix.language }}
+        with:
+          manage_locales: ${{ github.event.inputs.has_i18n }}
+          additional_locales: ${{ matrix.language }}
       - name: Installing PIP modules and linter tools
         uses: fbrehm/github-install-pip-modules@main
         with:
