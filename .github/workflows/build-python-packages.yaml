@@ -50,8 +50,8 @@ jobs:
         id: set-matrix
         shell: bash
         run: |
-          echo -e "matrix={\"language\": ${LANGS}},\n" >> ${GITHUB_OUTPUT}
-          echo -e "\"python_version\": ${PYTHON_VERSIONS}}" >> ${GITHUB_OUTPUT}
+          echo "matrix={\"language\": ${LANGS}}, \"python_version\": ${PYTHON_VERSIONS}}" >> ${GITHUB_OUTPUT}
+            #echo -e "\"python_version\": ${PYTHON_VERSIONS}}" >> ${GITHUB_OUTPUT}
           echo "Using Matrix: $( cat ${GITHUB_OUTPUT} )"
 
   ###########################
