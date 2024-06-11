@@ -229,7 +229,7 @@ jobs:
           yamlfiles=""
           for yamlfile in .github .gitlab-ci.yml ${ADDITIONAL_PATHS_YAMLLINT} ; do
             if [[ -f "${yamlfile}" ]] ; then
-              if [[ -z "${yamlfiles}" ]] ; thrn
+              if [[ -z "${yamlfiles}" ]] ; then
                 yamlfiles="${yamlfile}"
               else
                 yamlfiles+=" ${yamlfile}"
