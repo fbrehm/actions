@@ -66,6 +66,8 @@ jobs:
   exec-python-linter:
     name: Exec linter checks on Python sources
     uses: ./.github/workflows/python-linter-tests.yaml
+    needs:
+      - exec-pytest
     with:
       test_python_versions: ${{ inputs.test_python_versions }}
       latest_python_version: ${{ inputs.latest_python_version }}

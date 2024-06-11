@@ -37,8 +37,8 @@ jobs:
     runs-on: ubuntu-latest
     name: Executing Linters
     container: python:${{ inputs.latest_python_version }}
-    needs:
-      - test
+    # needs:
+    #  - test
     env:
       LIBDIR: ${{ inputs.libdir }}
       INDEX_FILE: ${{ inputs.libdir }}/__init__.py
