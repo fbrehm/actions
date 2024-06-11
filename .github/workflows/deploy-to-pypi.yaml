@@ -36,7 +36,7 @@ jobs:
       - name: "Preparing the Debian container"
         uses: fbrehm/prepare-debian-container@main
         with:
-          manage_locales: false
+          manage_locales: true
           additional_locales: ''
 
       - name: "Installing necessary PIP modules."
