@@ -6,6 +6,7 @@ name: "Execute pytest on a Python source package."
 # yamllint disable-line rule:truthy
 on:
   workflow_call:
+    inputs:
       has_i18n:
         description: 'Does the package support localisation and internationalisation?'
         type: boolean
