@@ -37,8 +37,6 @@ jobs:
     runs-on: ubuntu-latest
     name: Executing Linters
     container: python:${{ inputs.latest_python_version }}
-    # needs:
-    #  - test
     env:
       LIBDIR: ${{ inputs.libdir }}
       INDEX_FILE: ${{ inputs.libdir }}/__init__.py
@@ -153,7 +151,7 @@ jobs:
         run: |
           yamlfiles=""
           for yamlfile in .github .gitlab-ci.yml ${ADDITIONAL_PATHS_YAMLLINT} ; do
-            if [[ -f "${yamlfile}" ]] ; then
+            if [[ -e "${yamlfile}" ]] ; then
               if [[ -z "${yamlfiles}" ]] ; then
                 yamlfiles="${yamlfile}"
               else
