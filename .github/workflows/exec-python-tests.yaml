@@ -57,19 +57,19 @@ jobs:
     steps:
       - name: "Checking out sources."
         uses: actions/checkout@v4
-      - name: Show Environment
+      - name: "Show Environment"
         shell: bash
         run: |
           echo "Bash enviroment:"
           env | sort
           echo -e "\nPython version:"
           python --version
-      - name: Preparing the Debian container
+      - name: "Preparing the Debian container"
         uses: fbrehm/prepare-debian-container@main
         with:
           manage_locales: ${{ github.event.inputs.has_i18n }}
           additional_locales: ${{ matrix.language }}
-      - name: Installing PIP modules and linter tools
+      - name: "Installing PIP modules and linter tools"
         uses: fbrehm/github-install-pip-modules@main
         with:
           install_pytest: true

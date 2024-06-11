@@ -44,6 +44,13 @@ on:
       additional_paths_yamllint:
         description: "Files or directories to check with yamllint additional to standard files and directories."
         type: string
+      retention_days:
+        description: "The days for keeping the generated packages at GitHub."
+        type: number
+        default: 8
+    secrets:
+      pypi_token:
+        description: "The token to use for transmitting the package to PyPi"
 
 ################################################################################
 env:
@@ -55,7 +62,7 @@ jobs:
 
   ###########################
   exec-pytest:
-    name: Execute Python tests
+    name: "Execute Python tests"
     uses: ./.github/workflows/exec-python-tests.yaml
     with:
       has_i18n: ${{ inputs.has_i18n }}
@@ -64,202 +71,27 @@ jobs:
 
   ###########################
   exec-python-linter:
-    name: Exec linter checks on Python sources
+    name: "Exec linter checks on Python sources"
     uses: ./.github/workflows/python-linter-tests.yaml
     needs:
       - exec-pytest
     with:
-      test_python_versions: ${{ inputs.test_python_versions }}
       latest_python_version: ${{ inputs.latest_python_version }}
       libdir: ${{ inputs.libdir }}
       additional_files_flake8: ${{ inputs.additional_files_flake8 }}
       additional_scripts_shellcheck: ${{ inputs.additional_scripts_shellcheck }}
       additional_paths_yamllint: ${{ inputs.additional_paths_yamllint }}
 
-#  ###########################
-#  define-test-matrix:
-#    name: Defining the Test matrix
-#    runs-on: ubuntu-latest
-#    env:
-#      LANGS: ${{ inputs.languages }}
-#      PYTHON_VERSIONS: ${{ inputs.test_python_versions }}
-#    outputs:
-#      matrix: ${{ steps.set-matrix.outputs.matrix }}
-#    steps:
-#      - name: Defining the Test-Matrix
-#        id: set-matrix
-#        shell: bash
-#        run: |
-#          echo "matrix={\"language\": ${LANGS}, \"python_version\": ${PYTHON_VERSIONS}}" >> ${GITHUB_OUTPUT}
-#          echo "Using Matrix: $( cat ${GITHUB_OUTPUT} )"
-#
-#  ###########################
-#  test:
-#    name: Exec Python-${{ matrix.python_version }} tests on ${{ matrix.language }}
-#    runs-on: ubuntu-latest
-#    needs: define-test-matrix
-#    strategy:
-#      fail-fast: false
-#      matrix: ${{ fromJSON(needs.define-test-matrix.outputs.matrix) }}
-#      max-parallel: 5
-#    container: python:${{ matrix.python_version }}
-#    env:
-#      LANG: ${{ matrix.language }}
-#      LANGUAGE: ${{ matrix.language }}
-#      LC_ALL: ${{ matrix.language }}
-#    steps:
-#      - name: "Checking out sources."
-#        uses: actions/checkout@v4
-#      - name: Show Environment
-#        shell: bash
-#        run: |
-#          echo "Bash enviroment:"
-#          env | sort
-#          echo -e "\nPython version:"
-#          python --version
-#      - name: Preparing the Debian container
-#        uses: fbrehm/prepare-debian-container@main
-#        with:
-#          manage_locales: ${{ github.event.inputs.has_i18n }}
-#          additional_locales: ${{ matrix.language }}
-#      - name: Installing PIP modules and linter tools
-#        uses: fbrehm/github-install-pip-modules@main
-#        with:
-#          install_pytest: true
-#      - name: Executing PyTest for Python ${{ matrix.python_version }} and language ${{ matrix.language }}
-#        shell: bash
-#        run: pytest --verbose
-#
-#  ###########################
-#  linter:
-#    runs-on: ubuntu-latest
-#    name: Executing Linters
-#    container: python:${{ inputs.latest_python_version }}
-#    needs:
-#      - test
-#    env:
-#      LIBDIR: ${{ inputs.libdir }}
-#      INDEX_FILE: ${{ inputs.libdir }}/__init__.py
-#      ADDITIONAL_FILES_FLAKE8: ${{ inputs.additional_files_flake8 }}
-#      ADDITIONAL_FILES_SHELLCHECK: ${{ inputs.additional_scripts_shellcheck }}
-#      ADDITIONAL_PATHS_YAMLLINT: ${{ inputs.additional_paths_yamllint }}
-#    steps:
-#      - uses: actions/checkout@v4
-#      - uses: fbrehm/prepare-debian-container@main
-#      - uses: fbrehm/github-install-pip-modules@main
-#        with:
-#          install_linter_tools: true
-#
-#      - name: Checking validity of libdir ${[ inputs.libdir }}.
-#        shell: bash
-#        run: |
-#          echo -e -n "\nChecking for directory '${LIBDIR}': "
-#          if [[ ! -d "${LIBDIR}" ]] ; then
-#            echo "Python libdir '${LIBDIR}' does not exists." >&2
-#            exit 6
-#          fi
-#          echo "ok."
-#          echo -e -n "\nChecking for file '${INDEX_FILE}': "
-#          if [[ ! -f "${INDEX_FILE}" ]] ; then
-#            echo "Python package index file '${INDEX_FILE}' does not exists." >&2
-#            exit 6
-#          fi
-#          echo "ok."
-#
-#      - name: "Checking module version against tag."
-#        shell: bash
-#        run: |
-#          MODULE_VERSION=$( cat "${INDEX_FILE}" | grep -P '^__version__(\s|=)' | sed -e "s/^[^'\"]*['\"]//"  -e "s/['\"][ »]*\$//" )
-#          echo "Module version: '${MODULE_VERSION}'"
-#          if echo "${GITREF}" | grep -q -P '^refs/tags/' ; then
-#              TAG_VERSION=$( echo "${GITREF}" | sed -e 's|^refs/tags/||' )
-#              if [[ "${MODULE_VERSION}" == "${TAG_VERSION}" ]] ; then
-#                  echo "Tag and module version '${TAG_VERSION}' are okay."
-#              else
-#                  echo "Tag '${TAG_VERSION}' does not match module version '${MODULE_VERSION}'" >&2
-#                  exit 5
-#              fi
-#          fi
-#
-#      - name: "Comparing package version in debian/changlog and in lib/fb_vmware/__init__.py."
-#        shell: bash
-#        run: |
-#          echo "Getting package version from '${INDEX_FILE}' ..."
-#          MODULE_VERSION=$( cat "${INDEX_FILE}" | grep -P '^__version__(\s|=)' | sed -e "s/^[^'\"]*['\"]//"  -e "s/['\"][ 	]*\$//" )
-#          echo "Module version: '${MODULE_VERSION}'"
-#          if [[ -f debian/changelog ]] ; then
-#            DEBIAN_PKG_VERSION=$( head -n 1 debian/changelog | sed -e 's/^[^(]*(//' -e 's/).*//' )
-#            echo "Debian package version: '${DEBIAN_PKG_VERSION}'"
-#            if [[ "${MODULE_VERSION}" == "${DEBIAN_PKG_VERSION}" ]] ; then
-#                echo "Debian package version and package version '${DEBIAN_PKG_VERSION}' are matching."
-#            else
-#                echo "Debian package version '${DEBIAN_PKG_VERSION}' does not match package version '${MODULE_VERSION}'" >&2
-#                exit 5
-#            fi
-#          else
-#            echo "File 'debian/changelog' not found." >&2
-#            exit 7
-#          fi
-#
-#
-#      - name: Execute Flake 8
-#        shell: bash
-#        run: |
-#          PATHS_TO_CHECK="${LIBDIR}"
-#          if [[ -d "bin" ]] ; then
-#            PATHS_TO_CHECK+=" bin/*"
-#          fi
-#          if [[ -f setup.py ]] ; then
-#            PATHS_TO_CHECK+=" setup.py"
-#          fi
-#          if [[ -d test ]] ; then
-#            PATHS_TO_CHECK+=" test"
-#          fi
-#          if [[ -n "${ADDITIONAL_FILES_FLAKE8}" ]] ; then
-#            PATHS_TO_CHECK+=" ${ADDITIONAL_FILES_FLAKE8}"
-#          fi
-#          if [[ -z "${PATHS_TO_CHECK}" ]] ; then
-#            echo "No paths to check with flake8 found." >&2
-#          else
-#            echo "Executing flake8 on ${PATHS_TO_CHECK} ..."
-#            flake8 ${PATHS_TO_CHECK}
-#            echo "Executing forced flake8 on '${INDEX_FILE}' ..."
-#            flake8 --disable-noqa --ignore F401 "${INDEX_FILE}"
-#          fi
-#
-#      - name: Execute Shellcheck
-#        shell: bash
-#        run: |
-#          shellscripts=""
-#          for script in compile-xlate-msgs.sh update-env.sh xtract-xlate-msgs.sh get-debian-release get-debian-version get-rpm-release get-rpm-version ${ADDITIONAL_FILES_SHELLCHECK}; do
-#            if [[ -f "${script}" ]] ; then
-#              if [[ -z "${shellscripts}" ]] ; then
-#                shellscripts="${script}"
-#              else
-#                shellscripts+=" ${script}"
-#              fi
-#            fi
-#          done
-#          echo -n "Version of shellcheck: "
-#          shellcheck --version
-#          echo -e "\nChecking with shellcheck: ${shellscripts} ..."
-#          echo -e "shellcheck -x ${shellscripts}"
-#          shellcheck -x ${shellscripts}
-#
-#      - name: Execute Yamllint
-#        shell: bash
-#        run: |
-#          yamlfiles=""
-#          for yamlfile in .github .gitlab-ci.yml ${ADDITIONAL_PATHS_YAMLLINT} ; do
-#            if [[ -f "${yamlfile}" ]] ; then
-#              if [[ -z "${yamlfiles}" ]] ; then
-#                yamlfiles="${yamlfile}"
-#              else
-#                yamlfiles+=" ${yamlfile}"
-#              fi
-#            fi
-#          done
-#          echo -e "Checking with yamllint: ${yamlfiles}"
-#          yamllint ${yamlfiles}
+  ###########################
+  deploy-to-pypi:
+    name: "Building the Python packages and deploying it to PyPi."
+    uses: ./.github/workflows/deploy-to-pypi.yaml
+    needs:
+      - exec-python-linter
+    with:
+      latest_python_version: ${{ inputs.latest_python_version }}
+      retention_days: ${{ inputs.retention_days }}
+    secrets:
+      pypi_token: ${{ secrets.pypi_token }}
 
 # vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list

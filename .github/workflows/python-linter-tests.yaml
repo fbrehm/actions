@@ -7,10 +7,6 @@ name: "Execute linter tests on a Python source package."
 on:
   workflow_call:
     inputs:
-      test_python_versions:
-        description: 'A list of Python versions, for which the package should be tested.'
-        type: string
-        default: '["3.6", "3.7", "3.8", "3.9", "3.10", "3.11", "3.12"]'
       latest_python_version:
         description: "The latest Python version for executing linter tests."
         type: string
@@ -44,9 +40,12 @@ jobs:
       ADDITIONAL_FILES_SHELLCHECK: ${{ inputs.additional_scripts_shellcheck }}
       ADDITIONAL_PATHS_YAMLLINT: ${{ inputs.additional_paths_yamllint }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: fbrehm/prepare-debian-container@main
-      - uses: fbrehm/github-install-pip-modules@main
+      - name: "Checking out the sources."
+        uses: actions/checkout@v4
+      - name: "Preparing the Debian container"
+        uses: fbrehm/prepare-debian-container@main
+      - name: "Installing necessary PIP modules and linter tools."
+        uses: fbrehm/github-install-pip-modules@main
         with:
           install_linter_tools: true
 
