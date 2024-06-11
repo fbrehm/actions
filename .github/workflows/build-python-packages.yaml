@@ -208,9 +208,9 @@ jobs:
         shell: bash
         run: |
           shellscripts=""
-          for script in compile-xlate-msgs.sh update-env.sh xtract-xlate-msgs.sh ${ADDITIONAL_FILES_SHELLCHECK} get-debian-release get-debian-version get-rpm-release get-rpm-version; do
+          for script in compile-xlate-msgs.sh update-env.sh xtract-xlate-msgs.sh get-debian-release get-debian-version get-rpm-release get-rpm-version ${ADDITIONAL_FILES_SHELLCHECK}; do
             if [[ -f "${script}" ]] ; then
-              if [[ -z "${shellscripts}" ]] ; thrn
+              if [[ -z "${shellscripts}" ]] ; then
                 shellscripts="${script}"
               else
                 shellscripts+=" ${script}"
