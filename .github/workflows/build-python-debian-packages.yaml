@@ -74,7 +74,7 @@ jobs:
           matrix_json='['
           for deb_version in ${DEBIAN_VERSIONS}; do
             deb_version_lc=$( echo "${deb_version}" | tr '[:upper:]' '[:lower:]' )
-            echo "::notice::Performing Debian version '${deb_version}' -> '${deb_version_lc}'"
+            echo "::debug::Performing Debian version '${deb_version}' -> '${deb_version_lc}'"
             case "${deb_version_lc}" in
               debian-bullseye)
                 if [[ "${matrix_json}" != '[' ]] ; then
