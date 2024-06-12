@@ -48,6 +48,14 @@ on:
         description: "The days for keeping the generated packages at GitHub."
         type: number
         default: 8
+      latest_debian_version:
+        description: 'The short name of the latest stable Debian version.'
+        type: string
+        default: 'bookworm'
+      debian_versions:
+        description: 'Whitespace separated list of Debian and Ubuntu version to build the package for.'
+        type: string
+        default: 'debian-bullseye debian-bookworm debian-trixie ubuntu-focal ubuntu-jammy ubuntu-noble'
     secrets:
       pypi_token:
         description: "The token to use for transmitting the package to PyPi"
@@ -93,5 +101,19 @@ jobs:
       retention_days: ${{ inputs.retention_days }}
     secrets:
       pypi_token: ${{ secrets.pypi_token }}
+
+  ###########################
+  build-debian-packages:
+    name: "Building Debian packages."
+    uses: ./.github/workflows/build-python-debian-packages.yaml
+    needs:
+      - exec-pytest
+    with:
+      debian_email: ${{ inputs.debian_email }}
+      debian_fullname: ${{ inputs.debian_fullname }}
+      has_i18n: ${{ inputs.has_i18n }}
+      languages: ${{ inputs.languages }}
+      latest_debian_version: ${{ inputs,latest_debian_version }}
+      debian_versions: ${{ inputs.debian_versions }}
 
 # vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list

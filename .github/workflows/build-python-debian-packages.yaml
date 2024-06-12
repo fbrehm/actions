@@ -1,0 +1,177 @@
+---
+
+name: "Building Debian packages of a Python source package."
+
+################################################################################
+# yamllint disable-line rule:truthy
+on:
+  workflow_call:
+    inputs:
+      debian_email:
+        description: 'The mail address of the user, which will be used to update debian/chagelog.'
+        type: string
+        default: 'frank@brehm-online.com'
+      debian_fullname:
+        description: 'A human readable name of the user, which will be used to update debian/chagelog.'
+        type: string
+        default: 'Frank Brehm'
+      has_i18n:
+        description: 'Does the package support localisation and internationalisation?'
+        type: boolean
+        default: true
+      languages:
+        description: 'A list of languages, which will be supported, if has_i18n is true.'
+        type: string
+        default: '["de_DE.UTF-8", "en_US.UTF-8"]'
+      latest_debian_version:
+        description: 'The short name of the latest stable Debian version.'
+        type: string
+        default: 'bookworm'
+      debian_versions:
+        description: 'Whitespace separated list of Debian and Ubuntu version to build the package for.'
+        type: string
+        default: 'debian-bullseye debian-bookworm debian-trixie ubuntu-focal ubuntu-jammy ubuntu-noble'
+
+################################################################################
+env:
+  DEBFULLNAME: ${{ inputs.debian_fullname }}
+  DEBEMAIL: ${{ inputs.debian_email }}
+  GITREF: ${{ github.ref }}
+
+################################################################################
+jobs:
+
+  ###########################
+  define-debian-build-matrix:
+    name: "Defining the Matrix for building Debian packages"
+    runs-on: ubuntu-latest
+    container: debian:${{ inputs.latest_debian_version }}
+    env:
+      DEBIAN_VERSIONS: ${{ debian_versions }}
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Install JQ
+        shell: bash
+        run: |
+          apt install --yes jq
+        echo "::note file=build-python-debian-packages.yaml::Version of JQ: $( jq --version )"
+
+      - name: "Defining the build-matrix"
+        id: set-matrix
+        shell: bash
+        run: |
+          if [[ -z "${DEBIAN_VERSIONS}" ]] ; then
+            echo "::error file=build-python-debian-packages.yaml,title=Define build matrix::No Debian or Ubuntu versions given for building packages."
+            exit 5
+          fi
+          matrix_json='['
+          for deb_version in ${DEBIAN_VERSIONS}; do
+            deb_version_lc=$( echo "${deb_version}" | tr '[:upper:]' '[:lower:]' )
+            case "${deb_version_lc}" in:
+              debian-bullseye)
+                if [[ "${matrix_json}" != '[' ]] ; then
+                  matrix_json+=", "
+                fi
+                matrix_json+="{"
+                matrix_json+="\"title\": \"Debian 11 Bullseye\", "
+                matrix_json+="\"distributor\": \"Debian\", "
+                matrix_json+="\"os_codename\": \"bullseye\", "
+                matrix_json+="\"os_release\": \"11\", "
+                matrix_json+="\"container\": \"debian:bullseye\", "
+                matrix_json+="\"version_prefix\": \"deb11\", "
+                matrix_json+="\"compat\": \"12\""
+                matrix_json+="}"
+                echo "::note file=build-python-debian-packages.yaml,title=Define build matrix::Adding Debian 11 Bullseye"
+                ;;
+              debian-bookworm)
+                if [[ "${matrix_json}" != '[' ]] ; then
+                  matrix_json+=", "
+                fi
+                matrix_json+="{"
+                matrix_json+="\"title\": \"Debian 12 Bookworm\", "
+                matrix_json+="\"distributor\": \"Debian\", "
+                matrix_json+="\"os_codename\": \"bookworm\", "
+                matrix_json+="\"os_release\": \"12\", "
+                matrix_json+="\"container\": \"debian:bookworm\", "
+                matrix_json+="\"version_prefix\": \"deb12\", "
+                matrix_json+="\"compat\": \"12\""
+                matrix_json+="}"
+                echo "::note file=build-python-debian-packages.yaml,title=Define build matrix::Adding Debian 12 Bookworm"
+                ;;
+              debian-trixie)
+                if [[ "${matrix_json}" != '[' ]] ; then
+                  matrix_json+=", "
+                fi
+                matrix_json+="{"
+                matrix_json+="\"title\": \"Debian 13 Trixie\", "
+                matrix_json+="\"distributor\": \"Debian\", "
+                matrix_json+="\"os_codename\": \"trixie\", "
+                matrix_json+="\"os_release\": \"13\", "
+                matrix_json+="\"container\": \"debian:trixie\", "
+                matrix_json+="\"version_prefix\": \"deb13\", "
+                matrix_json+="\"compat\": \"13\""
+                matrix_json+="}"
+                echo "::note file=build-python-debian-packages.yaml,title=Define build matrix::Adding Debian 13 Trixie"
+                ;;
+              ubuntu-focal)
+                if [[ "${matrix_json}" != '[' ]] ; then
+                  matrix_json+=", "
+                fi
+                matrix_json+="{"
+                matrix_json+="\"title\": \"Ubuntu 20.04 Focal Fossa\", "
+                matrix_json+="\"distributor\": \"Ubuntu\", "
+                matrix_json+="\"os_codename\": \"focal\", "
+                matrix_json+="\"os_release\": \"20.04\", "
+                matrix_json+="\"container\": \"ubuntu:focal\", "
+                matrix_json+="\"version_prefix\": \"ubuntu20.04\", "
+                matrix_json+="\"compat\": \"12\""
+                matrix_json+="}"
+                echo "::note file=build-python-debian-packages.yaml,title=Define build matrix::Adding Ubuntu 20.04 Focal Fossa"
+                ;;
+              ubuntu-jammy)
+                if [[ "${matrix_json}" != '[' ]] ; then
+                  matrix_json+=", "
+                fi
+                matrix_json+="{"
+                matrix_json+="\"title\": \"Ubuntu 22.04 Jammy Jellyfish\", "
+                matrix_json+="\"distributor\": \"Ubuntu\", "
+                matrix_json+="\"os_codename\": \"jammy\", "
+                matrix_json+="\"os_release\": \"22.04\", "
+                matrix_json+="\"container\": \"ubuntu:jammy\", "
+                matrix_json+="\"version_prefix\": \"ubuntu22.04\", "
+                matrix_json+="\"compat\": \"12\""
+                matrix_json+="}"
+                echo "::note file=build-python-debian-packages.yaml,title=Define build matrix::Adding Ubuntu 22.04 Jammy Jellyfish"
+                ;;
+              ubuntu-noble)
+                if [[ "${matrix_json}" != '[' ]] ; then
+                  matrix_json+=", "
+                fi
+                matrix_json+="{"
+                matrix_json+="\"title\": \"Ubuntu 22.04 Noble Numbat\", "
+                matrix_json+="\"distributor\": \"Ubuntu\", "
+                matrix_json+="\"os_codename\": \"noble\", "
+                matrix_json+="\"os_release\": \"24.04\", "
+                matrix_json+="\"container\": \"ubuntu:noble\", "
+                matrix_json+="\"version_prefix\": \"ubuntu24.04\", "
+                matrix_json+="\"compat\": \"12\""
+                matrix_json+="}"
+                echo "::note file=build-python-debian-packages.yaml,title=Define build matrix::Adding Ubuntu 24.04 Noble Numbat"
+                ;;
+              *)
+                echo "::error file=build-python-debian-packages.yaml,title=Define build matrix::Unknown Debian or Ubuntu version '${deb_version}' given." >&2
+                exit 6
+                ;;
+            esac
+          done
+
+          matrix_json+="]"
+
+          echo -e "\nGenerated JSON:"
+          echo "${matrix_json}" | jq -C .
+
+          echo "matrix=${matrix_json}" >> ${GITHUB_OUTPUT}
+          echo -e "\nUsing Matrix: $( cat ${GITHUB_OUTPUT} )"
+
+# vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list
