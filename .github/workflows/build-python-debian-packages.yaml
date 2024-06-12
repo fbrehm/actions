@@ -47,7 +47,7 @@ jobs:
     runs-on: ubuntu-latest
     container: debian:${{ inputs.latest_debian_version }}
     env:
-      DEBIAN_VERSIONS: ${{ debian_versions }}
+      DEBIAN_VERSIONS: ${{ inputs.debian_versions }}
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
