@@ -23,6 +23,10 @@ on:
         description: 'A list of languages, which will be supported, if has_i18n is true.'
         type: string
         default: '["de_DE.UTF-8", "en_US.UTF-8"]'
+      additional_locales:
+        description: 'A whitespace separated list of additional locales (except en_US.UTF-8)'
+        required: false
+        default: 'de_DE.UTF-8'
       test_python_versions:
         description: 'A list of Python versions, for which the package should be tested.'
         type: string

@@ -23,6 +23,10 @@ on:
         description: 'A list of languages, which will be supported, if has_i18n is true.'
         type: string
         default: '["de_DE.UTF-8", "en_US.UTF-8"]'
+      additional_locales:
+        description: 'A whitespace separated list of additional locales (except en_US.UTF-8)'
+        required: false
+        default: 'de_DE.UTF-8'
       latest_debian_version:
         description: 'The short name of the latest stable Debian version.'
         type: string
@@ -210,6 +214,22 @@ jobs:
           echo -e "\nBash enviroment:"
           env | sort
 
+      - name: 'Adding Debian repo definitions of Frank Brehm'
+        uses: ./.github/actions/add-fb-debian-repo
+        with:
+          vendor: Debian
+          distro: ${{ inputs.latest_debian_version }}
+
+      - name: 'Adding Debian repo definitions of Frank Brehm'
+        uses: ./.github/actions/add-fb-debian-repo
+          vendor: ${{ matrix.distributor }}
+          distro: ${{ matrix.os_codename }}
+
+      - name: "Preparing the Debian container"
+        uses: fbrehm/prepare-debian-container@main
+        with:
+          manage_locales: false
+
   ###########################
   build_debian_bin:
     runs-on: ubuntu-latest
@@ -242,5 +262,17 @@ jobs:
           fi
           echo -e "\nBash enviroment:"
           env | sort
+
+      - name: 'Adding Debian repo definitions of Frank Brehm'
+        uses: ./.github/actions/add-fb-debian-repo
+          vendor: ${{ matrix.distributor }}
+          distro: ${{ matrix.os_codename }}
+
+      - name: "Preparing the Debian container"
+        uses: fbrehm/prepare-debian-container@main
+        with:
+          manage_locales: ${{ inputs.has_i18n }}
+          additional_locales: ${{ inputs.additional_locales }}
+
 
 # vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list
