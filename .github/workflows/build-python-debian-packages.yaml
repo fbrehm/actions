@@ -193,6 +193,8 @@ jobs:
     name: "Building Debian Source Packages"
     if: ${{ github.ref_name == 'main' || github.ref_name == 'master' || startsWith(github.ref_name, 'test') || github.ref_name == 'dev/workflow' || startsWith(github.ref, 'refs/tags/')  }}
     container: debian:${{ inputs.latest_debian_version }}
+    env:
+      DEBIAN_VERSION: ${{ inputs.latest_debian_version }}
     steps:
       - name: "Checking out sources."
         uses: actions/checkout@v4
@@ -200,12 +202,13 @@ jobs:
       - name: "Show Environment"
         shell: bash
         run: |
+          echo "::notice::Building Debian source package on Debian ${DEBIAN_VERSION}."
           if [[ -f /etc/os-release ]] ; then
-            echo "OS release for building source package:"
+            echo -e "\nOS release for building source package:"
             cat /etc/os-release
           fi
           echo -e "\nBash enviroment:"
-          env
+          env | sort
 
   ###########################
   build_debian_bin:
@@ -217,6 +220,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.define-debian-build-matrix.outputs.matrix) }}
+    container: ${{ matrix.container }}
+    env:
+      COMPAT: ${{ matrix.compat }}
+      DISTRIBUTOR: ${{ matrix.distributor }}
+      OS_CODENAME: ${{ matrix.os_codename }}
+      OS_RELEASE: ${{ matrix.os_release }}
+      OS_TITLE: ${{ matrix.os_title }}
+      VERSION_PREFIX: ${{ matrix.version_prefix }}
     steps:
       - name: "Checking out sources."
         uses: actions/checkout@v4
@@ -224,8 +235,9 @@ jobs:
       - name: "Show Environment"
         shell: bash
         run: |
+          echo "::notice::Building Debian binary packages on ${OS_TITLE}."
           if [[ -f /etc/os-release ]] ; then
-            echo "OS release:"
+            echo -e "\nOS release:"
             cat /etc/os-release
           fi
           echo -e "\nBash enviroment:"
