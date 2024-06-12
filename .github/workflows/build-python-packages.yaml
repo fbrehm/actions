@@ -76,7 +76,7 @@ jobs:
       has_i18n: ${{ inputs.has_i18n }}
       languages: ${{ inputs.languages }}
       test_python_versions: ${{ inputs.test_python_versions }}
-      latest_python_version: ${{ inputs.latest_python_version }}
+      latest_debian_version: ${{ inputs.latest_debian_version }}
 
   ###########################
   exec-python-linter:
