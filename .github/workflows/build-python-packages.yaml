@@ -108,7 +108,7 @@ jobs:
     name: "Building Debian packages."
     uses: ./.github/workflows/build-python-debian-packages.yaml
     needs:
-      - exec-pytest
+      - exec-python-linter
     with:
       debian_email: ${{ inputs.debian_email }}
       debian_fullname: ${{ inputs.debian_fullname }}

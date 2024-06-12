@@ -57,14 +57,14 @@ jobs:
         id: apt-update
         shell: bash
         run: |
-          echo "::notice::Update all package lists."
+          echo "Update all package lists."
           apt update --yes
 
       - name: "Install JQ"
         shell: bash
         run: |
           apt install --yes jq
-          echo "::notice::Version of JQ: $( jq --version )"
+          echo -e "\nVersion of JQ: $( jq --version )"
 
       - name: "Defining the build-matrix"
         id: set-matrix
@@ -92,7 +92,7 @@ jobs:
                 matrix_json+="\"version_prefix\": \"deb11\", "
                 matrix_json+="\"compat\": \"12\""
                 matrix_json+="}"
-                echo "::notice file=build-python-debian-packages.yaml,title=Define build matrix::Adding Debian 11 Bullseye"
+                echo "::notice title=Define Debian build matrix::Adding Debian 11 Bullseye"
                 ;;
               debian-bookworm)
                 if [[ "${matrix_json}" != '[' ]] ; then
@@ -107,7 +107,7 @@ jobs:
                 matrix_json+="\"version_prefix\": \"deb12\", "
                 matrix_json+="\"compat\": \"12\""
                 matrix_json+="}"
-                echo "::notice file=build-python-debian-packages.yaml,title=Define build matrix::Adding Debian 12 Bookworm"
+                echo "::notice title=Define Debian build matrix::Adding Debian 12 Bookworm"
                 ;;
               debian-trixie)
                 if [[ "${matrix_json}" != '[' ]] ; then
@@ -122,7 +122,7 @@ jobs:
                 matrix_json+="\"version_prefix\": \"deb13\", "
                 matrix_json+="\"compat\": \"13\""
                 matrix_json+="}"
-                echo "::notice file=build-python-debian-packages.yaml,title=Define build matrix::Adding Debian 13 Trixie"
+                echo "::notice title=Define Debian build matrix::Adding Debian 13 Trixie"
                 ;;
               ubuntu-focal)
                 if [[ "${matrix_json}" != '[' ]] ; then
@@ -137,7 +137,7 @@ jobs:
                 matrix_json+="\"version_prefix\": \"ubuntu20.04\", "
                 matrix_json+="\"compat\": \"12\""
                 matrix_json+="}"
-                echo "::notice file=build-python-debian-packages.yaml,title=Define build matrix::Adding Ubuntu 20.04 Focal Fossa"
+                echo "::notice title=Define Debian build matrix::Adding Ubuntu 20.04 Focal Fossa"
                 ;;
               ubuntu-jammy)
                 if [[ "${matrix_json}" != '[' ]] ; then
@@ -152,7 +152,7 @@ jobs:
                 matrix_json+="\"version_prefix\": \"ubuntu22.04\", "
                 matrix_json+="\"compat\": \"12\""
                 matrix_json+="}"
-                echo "::notice file=build-python-debian-packages.yaml,title=Define build matrix::Adding Ubuntu 22.04 Jammy Jellyfish"
+                echo "::notice title=Define Debian build matrix::Adding Ubuntu 22.04 Jammy Jellyfish"
                 ;;
               ubuntu-noble)
                 if [[ "${matrix_json}" != '[' ]] ; then
@@ -167,10 +167,10 @@ jobs:
                 matrix_json+="\"version_prefix\": \"ubuntu24.04\", "
                 matrix_json+="\"compat\": \"12\""
                 matrix_json+="}"
-                echo "::notice file=build-python-debian-packages.yaml,title=Define build matrix::Adding Ubuntu 24.04 Noble Numbat"
+                echo "::notice title=Define Debian build matrix::Adding Ubuntu 24.04 Noble Numbat"
                 ;;
               *)
-                echo "::error file=build-python-debian-packages.yaml,title=Define build matrix::Unknown Debian or Ubuntu version '${deb_version}' given." >&2
+                echo "::error title=Define Debian build matrix::Unknown Debian or Ubuntu version '${deb_version}' given." >&2
                 exit 6
                 ;;
             esac
@@ -193,15 +193,16 @@ jobs:
     steps:
       - name: "Checking out sources."
         uses: actions/checkout@v4
+
       - name: "Show Environment"
         shell: bash
         run: |
           if [[ -f /etc/os-release ]] ; then
-            echo "::notice::OS release:"
+            echo "OS release for building source package:"
             cat /etc/os-release
           fi
-          echo "::notice::Bash enviroment:"
-          env | sort
+          echo -e "\nBash enviroment:"
+          env
 
   ###########################
   build_debian_bin:
@@ -209,21 +210,22 @@ jobs:
     needs:
       - define-debian-build-matrix
     name: Building Debian Binary Packages for ${{ matrix.title }}
-    if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/heads/test') || startsWith(github.ref, 'refs/tags/') }}
+    if: ${{ github.ref_name == 'main' || github.ref_name == 'master' || startsWith(github.ref_name, 'test') || github.ref_name == 'dev/workflow' || startsWith(github.ref, 'refs/tags/')  }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.define-debian-build-matrix.outputs.matrix) }}
     steps:
       - name: "Checking out sources."
         uses: actions/checkout@v4
+
       - name: "Show Environment"
         shell: bash
         run: |
           if [[ -f /etc/os-release ]] ; then
-            echo "::notice::OS release:"
+            echo "OS release:"
             cat /etc/os-release
           fi
-          echo "::notice::Bash enviroment:"
+          echo -e "\nBash enviroment:"
           env | sort
 
 # vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list
