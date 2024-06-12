@@ -51,6 +51,12 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
+      - name: "Update package lists"
+        id: apt-update
+        shell: bash
+        run: |
+          echo "::note file=build-python-debian-packages.yaml::Update all package lists."
+          apt update --yes
       - name: Install JQ
         shell: bash
         run: |
