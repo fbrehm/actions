@@ -60,6 +60,9 @@ on:
         description: 'Whitespace separated list of Debian and Ubuntu version to build the package for.'
         type: string
         default: 'debian-bullseye debian-bookworm debian-trixie ubuntu-focal ubuntu-jammy ubuntu-noble'
+      additional_debian_build_packages:
+        description: "A withespace separated list of packages additional to the base build packages"
+        type: string
     secrets:
       pypi_token:
         description: "The token to use for transmitting the package to PyPi"
@@ -120,5 +123,6 @@ jobs:
       languages: ${{ inputs.languages }}
       latest_debian_version: ${{ inputs.latest_debian_version }}
       debian_versions: ${{ inputs.debian_versions }}
+      additional_debian_build_packages: ${{ inputs.additional_debian_build_packages }}
 
 # vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list

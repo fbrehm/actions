@@ -35,6 +35,9 @@ on:
         description: 'Whitespace separated list of Debian and Ubuntu version to build the package for.'
         type: string
         default: 'debian-bullseye debian-bookworm debian-trixie ubuntu-focal ubuntu-jammy ubuntu-noble'
+      additional_debian_build_packages:
+        description: "A withespace separated list of packages additional to the base build packages"
+        type: string
 
 ################################################################################
 env:
@@ -224,6 +227,11 @@ jobs:
         uses: fbrehm/prepare-debian-container@main
         with:
           manage_locales: false
+
+      - name: "Install Debian Python Build Environment"
+        uses: ./.github/actions/debian-install-python-buildenv
+        with:
+          additional_packages: ${{ inputs.additional_debian_build_packages }}
 
   ###########################
   build_debian_bin:

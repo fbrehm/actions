@@ -1,0 +1,38 @@
+---
+
+name: "Install Debian Python Build Environment"
+author: 'Frank Brehm'
+description: 'Installing all necessary packages for building Debian packages out of Python sources'
+inputs:
+  additional_packages:
+    description: "A withespace separated list of packages additional to the base build packages"
+    type: string
+
+runs:
+  using: "composite"
+  steps:
+    - name: "Install Debian Python Build Environment"
+      id: install-debian-build-pkgs
+      shell: bash
+      env:
+        ADDITIONAL_PACKAGES: ${{ inputs.additional_packages }}
+      run: |
+        echo "Installing packages for Python build environment."
+
+        PKGLIST="sudo locales gettext build-essential gpg debsigs devscripts fakeroot"
+        PKGLIST+=" debhelper automake autotools-dev pkg-config help2man lsb-release ca-certificates""
+        PKGLIST+=" libdistro-info-perl python3-all python3-packaging python3-babel python3-pip"
+        PKGLIST+=" python3-requests python3-setuptools python3-six python3-tz python3-wheel dh-python"
+
+        if [[ -n "${ADDITIONAL_PACKAGES}" ]] ; then
+          echo -e "\nAdditional packages: ${ADDITIONAL_PACKAGES}"
+          PKGLIST+=" ${ADDITIONAL_PACKAGES}"
+        fi
+
+        echo -e "\nInstalling packages: ${PKGLIST}"
+        echo "::debug::Installing packages: ${PKGLIST}"
+
+        apt install --yes --no-install-recommends ${PKGLIST}
+
+
+# vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list
