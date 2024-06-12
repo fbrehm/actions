@@ -55,7 +55,7 @@ jobs:
         shell: bash
         run: |
           apt install --yes jq
-        echo "::note file=build-python-debian-packages.yaml::Version of JQ: $( jq --version )"
+          echo "::note file=build-python-debian-packages.yaml::Version of JQ: $( jq --version )"
 
       - name: "Defining the build-matrix"
         id: set-matrix
