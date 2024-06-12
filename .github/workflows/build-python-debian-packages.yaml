@@ -55,13 +55,13 @@ jobs:
         id: apt-update
         shell: bash
         run: |
-          echo "::note file=build-python-debian-packages.yaml::Update all package lists."
+          echo "::notice file=build-python-debian-packages.yaml::Update all package lists."
           apt update --yes
       - name: Install JQ
         shell: bash
         run: |
           apt install --yes jq
-          echo "::note file=build-python-debian-packages.yaml::Version of JQ: $( jq --version )"
+          echo "::notice file=build-python-debian-packages.yaml::Version of JQ: $( jq --version )"
 
       - name: "Defining the build-matrix"
         id: set-matrix
@@ -74,7 +74,8 @@ jobs:
           matrix_json='['
           for deb_version in ${DEBIAN_VERSIONS}; do
             deb_version_lc=$( echo "${deb_version}" | tr '[:upper:]' '[:lower:]' )
-            case "${deb_version_lc}" in:
+            echo "::notice::Performing Debian version '${deb_version}' -> '${deb_version_lc}'"
+            case "${deb_version_lc}" in
               debian-bullseye)
                 if [[ "${matrix_json}" != '[' ]] ; then
                   matrix_json+=", "
@@ -88,7 +89,7 @@ jobs:
                 matrix_json+="\"version_prefix\": \"deb11\", "
                 matrix_json+="\"compat\": \"12\""
                 matrix_json+="}"
-                echo "::note file=build-python-debian-packages.yaml,title=Define build matrix::Adding Debian 11 Bullseye"
+                echo "::notice file=build-python-debian-packages.yaml,title=Define build matrix::Adding Debian 11 Bullseye"
                 ;;
               debian-bookworm)
                 if [[ "${matrix_json}" != '[' ]] ; then
@@ -103,7 +104,7 @@ jobs:
                 matrix_json+="\"version_prefix\": \"deb12\", "
                 matrix_json+="\"compat\": \"12\""
                 matrix_json+="}"
-                echo "::note file=build-python-debian-packages.yaml,title=Define build matrix::Adding Debian 12 Bookworm"
+                echo "::notice file=build-python-debian-packages.yaml,title=Define build matrix::Adding Debian 12 Bookworm"
                 ;;
               debian-trixie)
                 if [[ "${matrix_json}" != '[' ]] ; then
@@ -118,7 +119,7 @@ jobs:
                 matrix_json+="\"version_prefix\": \"deb13\", "
                 matrix_json+="\"compat\": \"13\""
                 matrix_json+="}"
-                echo "::note file=build-python-debian-packages.yaml,title=Define build matrix::Adding Debian 13 Trixie"
+                echo "::notice file=build-python-debian-packages.yaml,title=Define build matrix::Adding Debian 13 Trixie"
                 ;;
               ubuntu-focal)
                 if [[ "${matrix_json}" != '[' ]] ; then
@@ -133,7 +134,7 @@ jobs:
                 matrix_json+="\"version_prefix\": \"ubuntu20.04\", "
                 matrix_json+="\"compat\": \"12\""
                 matrix_json+="}"
-                echo "::note file=build-python-debian-packages.yaml,title=Define build matrix::Adding Ubuntu 20.04 Focal Fossa"
+                echo "::notice file=build-python-debian-packages.yaml,title=Define build matrix::Adding Ubuntu 20.04 Focal Fossa"
                 ;;
               ubuntu-jammy)
                 if [[ "${matrix_json}" != '[' ]] ; then
@@ -148,7 +149,7 @@ jobs:
                 matrix_json+="\"version_prefix\": \"ubuntu22.04\", "
                 matrix_json+="\"compat\": \"12\""
                 matrix_json+="}"
-                echo "::note file=build-python-debian-packages.yaml,title=Define build matrix::Adding Ubuntu 22.04 Jammy Jellyfish"
+                echo "::notice file=build-python-debian-packages.yaml,title=Define build matrix::Adding Ubuntu 22.04 Jammy Jellyfish"
                 ;;
               ubuntu-noble)
                 if [[ "${matrix_json}" != '[' ]] ; then
@@ -163,7 +164,7 @@ jobs:
                 matrix_json+="\"version_prefix\": \"ubuntu24.04\", "
                 matrix_json+="\"compat\": \"12\""
                 matrix_json+="}"
-                echo "::note file=build-python-debian-packages.yaml,title=Define build matrix::Adding Ubuntu 24.04 Noble Numbat"
+                echo "::notice file=build-python-debian-packages.yaml,title=Define build matrix::Adding Ubuntu 24.04 Noble Numbat"
                 ;;
               *)
                 echo "::error file=build-python-debian-packages.yaml,title=Define build matrix::Unknown Debian or Ubuntu version '${deb_version}' given." >&2
