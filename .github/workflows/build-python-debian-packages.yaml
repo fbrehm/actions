@@ -74,13 +74,15 @@ jobs:
             echo "::error::No Debian or Ubuntu versions given for building packages."
             exit 5
           fi
-          matrix_json='['
+          matrix_json='{"include": ['
+          first_distro='y'
+
           for deb_version in ${DEBIAN_VERSIONS}; do
             deb_version_lc=$( echo "${deb_version}" | tr '[:upper:]' '[:lower:]' )
             echo "::debug::Performing Debian version '${deb_version}' -> '${deb_version_lc}'"
             case "${deb_version_lc}" in
               debian-bullseye)
-                if [[ "${matrix_json}" != '[' ]] ; then
+                if [[ "${first_distro}" != 'y' ]] ; then
                   matrix_json+=", "
                 fi
                 matrix_json+="{"
@@ -95,7 +97,7 @@ jobs:
                 echo "::notice title=Define Debian build matrix::Adding Debian 11 Bullseye"
                 ;;
               debian-bookworm)
-                if [[ "${matrix_json}" != '[' ]] ; then
+                if [[ "${first_distro}" != 'y' ]] ; then
                   matrix_json+=", "
                 fi
                 matrix_json+="{"
@@ -110,7 +112,7 @@ jobs:
                 echo "::notice title=Define Debian build matrix::Adding Debian 12 Bookworm"
                 ;;
               debian-trixie)
-                if [[ "${matrix_json}" != '[' ]] ; then
+                if [[ "${first_distro}" != 'y' ]] ; then
                   matrix_json+=", "
                 fi
                 matrix_json+="{"
@@ -125,7 +127,7 @@ jobs:
                 echo "::notice title=Define Debian build matrix::Adding Debian 13 Trixie"
                 ;;
               ubuntu-focal)
-                if [[ "${matrix_json}" != '[' ]] ; then
+                if [[ "${first_distro}" != 'y' ]] ; then
                   matrix_json+=", "
                 fi
                 matrix_json+="{"
@@ -140,7 +142,7 @@ jobs:
                 echo "::notice title=Define Debian build matrix::Adding Ubuntu 20.04 Focal Fossa"
                 ;;
               ubuntu-jammy)
-                if [[ "${matrix_json}" != '[' ]] ; then
+                if [[ "${first_distro}" != 'y' ]] ; then
                   matrix_json+=", "
                 fi
                 matrix_json+="{"
@@ -155,7 +157,7 @@ jobs:
                 echo "::notice title=Define Debian build matrix::Adding Ubuntu 22.04 Jammy Jellyfish"
                 ;;
               ubuntu-noble)
-                if [[ "${matrix_json}" != '[' ]] ; then
+                if [[ "${first_distro}" != 'y' ]] ; then
                   matrix_json+=", "
                 fi
                 matrix_json+="{"
@@ -174,15 +176,16 @@ jobs:
                 exit 6
                 ;;
             esac
+            first_distro='n'
           done
 
-          matrix_json+="]"
+          matrix_json+="]}"
 
           echo -e "\nGenerated JSON:"
           echo "${matrix_json}" | jq -C .
 
           echo "matrix=${matrix_json}" >> ${GITHUB_OUTPUT}
-          echo -e "::debug::Using Matrix: $( cat ${GITHUB_OUTPUT} )"
+          echo "::debug::Using Matrix: $( cat ${GITHUB_OUTPUT} )"
 
   ###########################
   build_debian_sources:
