@@ -226,7 +226,7 @@ jobs:
       DISTRIBUTOR: ${{ matrix.distributor }}
       OS_CODENAME: ${{ matrix.os_codename }}
       OS_RELEASE: ${{ matrix.os_release }}
-      OS_TITLE: ${{ matrix.os_title }}
+      OS_TITLE: ${{ matrix.title }}
       VERSION_PREFIX: ${{ matrix.version_prefix }}
     steps:
       - name: "Checking out sources."
