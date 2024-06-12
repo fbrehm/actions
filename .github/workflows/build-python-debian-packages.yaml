@@ -218,7 +218,7 @@ jobs:
           env | sort
 
       - name: 'Adding Debian repo definitions of Frank Brehm'
-        uses: ./.github/actions/add-fb-debian-repo
+        uses: fbrehm/github-add-fb-debian-repo@main
         with:
           vendor: Debian
           distro: ${{ inputs.latest_debian_version }}
@@ -267,7 +267,7 @@ jobs:
           env | sort
 
       - name: 'Adding Debian repo definitions of Frank Brehm'
-        uses: ./.github/actions/add-fb-debian-repo
+        uses: fbrehm/github-add-fb-debian-repo@main
         with:
           vendor: ${{ matrix.distributor }}
           distro: ${{ matrix.os_codename }}
