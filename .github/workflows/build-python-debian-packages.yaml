@@ -55,20 +55,21 @@ jobs:
         id: apt-update
         shell: bash
         run: |
-          echo "::notice file=build-python-debian-packages.yaml::Update all package lists."
+          echo "::notice::Update all package lists."
           apt update --yes
-      - name: Install JQ
+
+      - name: "Install JQ"
         shell: bash
         run: |
           apt install --yes jq
-          echo "::notice file=build-python-debian-packages.yaml::Version of JQ: $( jq --version )"
+          echo "::notice::Version of JQ: $( jq --version )"
 
       - name: "Defining the build-matrix"
         id: set-matrix
         shell: bash
         run: |
           if [[ -z "${DEBIAN_VERSIONS}" ]] ; then
-            echo "::error file=build-python-debian-packages.yaml,title=Define build matrix::No Debian or Ubuntu versions given for building packages."
+            echo "::error::No Debian or Ubuntu versions given for building packages."
             exit 5
           fi
           matrix_json='['
@@ -179,6 +180,6 @@ jobs:
           echo "${matrix_json}" | jq -C .
 
           echo "matrix=${matrix_json}" >> ${GITHUB_OUTPUT}
-          echo -e "\nUsing Matrix: $( cat ${GITHUB_OUTPUT} )"
+          echo -e "::debug::Using Matrix: $( cat ${GITHUB_OUTPUT} )"
 
 # vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list

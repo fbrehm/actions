@@ -19,26 +19,58 @@ on:
         description: 'A list of Python versions, for which the package should be tested.'
         type: string
         default: '["3.6", "3.7", "3.8", "3.9", "3.10", "3.11", "3.12"]'
+      latest_debian_version:
+        description: 'The short name of the latest stable Debian version.'
+        type: string
+        default: 'bookworm'
 
 ################################################################################
 jobs:
 
   ###########################
   define-test-matrix:
-    name: Defining the Test matrix
+    name: "Defining the Python Test matrix"
     runs-on: ubuntu-latest
+    container: debian:${{ inputs.latest_debian_version }}
     env:
       LANGS: ${{ inputs.languages }}
       PYTHON_VERSIONS: ${{ inputs.test_python_versions }}
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
+      - name: "Update package lists"
+        id: apt-update
+        shell: bash
+        run: |
+          echo "::notice::Update all package lists."
+          apt update --yes
+
+      - name: "Install JQ"
+        shell: bash
+        run: |
+          apt install --yes jq
+          echo "::notice::Version of JQ: $( jq --version )"
+
       - name: Defining the Test-Matrix
         id: set-matrix
         shell: bash
         run: |
-          echo "matrix={\"language\": ${LANGS}, \"python_version\": ${PYTHON_VERSIONS}}" >> ${GITHUB_OUTPUT}
-          echo "Using Matrix: $( cat ${GITHUB_OUTPUT} )"
+          if [[ -z "${LANGS}" ]] ; then
+            echo "::error::No languages given for creating the Python test matrix"
+            exit 5
+          fi
+          if [[ -z "${PYTHON_VERSIONS}" ]] ; then
+            echo "::error::No Python versions given for creating the Python test matrix"
+            exit 5
+          fi
+
+          matrix_json="{\"language\": ${LANGS}, \"python_version\": ${PYTHON_VERSIONS}}"
+
+          echo "::notice::Generated JSON:"
+          echo "${matrix_json}" | jq -C .
+
+          echo "matrix=${matrix_json}" >> ${GITHUB_OUTPUT}
+          echo "::debug::Using Matrix: $( cat ${GITHUB_OUTPUT} )"
 
   ###########################
   test:
