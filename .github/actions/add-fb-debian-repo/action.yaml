@@ -44,18 +44,22 @@ runs:
     - name: Creating sources.list
       shell: bash
       env:
-        USE_HTTPS: ${{ inputs.use_https }}
+        DISTRO: ${{ inputs.distro }}
+        GPG_KEY_PATH: ${{ inputs.gpg_key_path }}
         REPO_SERVER: ${{ inputs.repo_server }}
         ROOT_PATH: ${{ inputs.root_path }}
-        GPG_KEY_PATH: ${{ inputs.gpg_key_path }}
-        VENDOR: ${{ inputs.vendor }}
-        DISTRO: ${{ inputs.distro }}
         SUITE: ${{ inputs.suite }}
+        USE_HTTPS: ${{ inputs.use_https }}
+        VENDOR: ${{ inputs.vendor }}
       run: |
         if [[ ! -d /etc/apt/sources.list.d/ ]] ; then
             echo "::error::Directory '/etc/apt/sources.list.d' not found or is not a directory."
             exit 5
         fi
+
+        echo -e "Bash enviroment:"
+        env | sort
+        echo "::debug::Bash enviroment: $( env | sort )"
 
         URL="https://"
         if [[ "${USE_HTTPS}" == false ]] ; then
