@@ -25,7 +25,7 @@ on:
         default: '["de_DE.UTF-8", "en_US.UTF-8"]'
       additional_locales:
         description: 'A whitespace separated list of additional locales (except en_US.UTF-8)'
-        required: false
+        type: string
         default: 'de_DE.UTF-8'
       test_python_versions:
         description: 'A list of Python versions, for which the package should be tested.'
