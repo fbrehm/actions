@@ -113,7 +113,7 @@ jobs:
       debian_fullname: ${{ inputs.debian_fullname }}
       has_i18n: ${{ inputs.has_i18n }}
       languages: ${{ inputs.languages }}
-      latest_debian_version: ${{ inputs,latest_debian_version }}
+      latest_debian_version: ${{ inputs.latest_debian_version }}
       debian_versions: ${{ inputs.debian_versions }}
 
 # vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list
