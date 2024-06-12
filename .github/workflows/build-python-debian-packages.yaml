@@ -229,7 +229,7 @@ jobs:
           manage_locales: false
 
       - name: "Install Debian Python Build Environment"
-        uses: ./.github/actions/debian-install-python-buildenv
+        uses: fbrehm/debian-install-python-buildenv@main
         with:
           additional_packages: ${{ inputs.additional_debian_build_packages }}
 
@@ -277,6 +277,11 @@ jobs:
         with:
           manage_locales: ${{ inputs.has_i18n }}
           additional_locales: ${{ inputs.additional_locales }}
+
+      - name: "Install Debian Python Build Environment"
+        uses: fbrehm/debian-install-python-buildenv@main
+        with:
+          additional_packages: ${{ inputs.additional_debian_build_packages }}
 
 
 # vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list
