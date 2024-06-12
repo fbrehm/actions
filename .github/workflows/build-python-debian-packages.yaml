@@ -220,12 +220,6 @@ jobs:
           vendor: Debian
           distro: ${{ inputs.latest_debian_version }}
 
-      - name: 'Adding Debian repo definitions of Frank Brehm'
-        uses: ./.github/actions/add-fb-debian-repo
-        with:
-          vendor: ${{ matrix.distributor }}
-          distro: ${{ matrix.os_codename }}
-
       - name: "Preparing the Debian container"
         uses: fbrehm/prepare-debian-container@main
         with:
