@@ -38,6 +38,20 @@ on:
       additional_debian_build_packages:
         description: "A withespace separated list of packages additional to the base build packages"
         type: string
+      password_file:
+        description: 'The file containing the password of the private GPG key.'
+        type: string
+        default: '.private/uhu.txt'
+      key_id:
+        description: 'The ID of the used private GPG key.'
+        type: string
+    secrets:
+      public_key:
+        description: 'The exported public GPG key"'
+      private_key:
+        description: 'The exported private GPG key"'
+      key_password:
+        description: 'The password of the imported private GPG key.'
 
 ################################################################################
 env:
@@ -232,6 +246,15 @@ jobs:
         uses: fbrehm/debian-install-python-buildenv@main
         with:
           additional_packages: ${{ inputs.additional_debian_build_packages }}
+
+      - name: 'Preparing GPG for signing files without entering a password'
+        if: ${{ secrets.public_key }} && ${{ secrets.private_key }} && ${{ secrets.key_password }} && ${{ inputs.key_id }}
+        with:
+          public_key: ${{ secrets.public_key }}
+          private_key: ${{ secrets.private_key }}
+          key_password: ${{ secrets.key_password }}
+          password_file: ${{ inputs.password_file }}
+          key_id: ${{ inputs.key_id }}
 
   ###########################
   build_debian_bin:

@@ -63,9 +63,22 @@ on:
       additional_debian_build_packages:
         description: "A withespace separated list of packages additional to the base build packages"
         type: string
+      password_file:
+        description: 'The file containing the password of the private GPG key.'
+        type: string
+        default: '.private/uhu.txt'
+      key_id:
+        description: 'The ID of the used private GPG key.'
+        type: string
     secrets:
       pypi_token:
         description: "The token to use for transmitting the package to PyPi"
+      public_key:
+        description: 'The exported public GPG key"'
+      private_key:
+        description: 'The exported private GPG key"'
+      key_password:
+        description: 'The password of the imported private GPG key.'
 
 ################################################################################
 env:
@@ -100,7 +113,7 @@ jobs:
 
   ###########################
   deploy-to-pypi:
-    name: "Building the Python packages and deploying it to PyPi."
+    name: "Building the Python packages and deploying it to PyPi"
     uses: ./.github/workflows/deploy-to-pypi.yaml
     needs:
       - exec-python-linter
@@ -112,7 +125,7 @@ jobs:
 
   ###########################
   build-debian-packages:
-    name: "Building Debian packages."
+    name: "Building Debian packages"
     uses: ./.github/workflows/build-python-debian-packages.yaml
     needs:
       - exec-python-linter
@@ -124,5 +137,11 @@ jobs:
       latest_debian_version: ${{ inputs.latest_debian_version }}
       debian_versions: ${{ inputs.debian_versions }}
       additional_debian_build_packages: ${{ inputs.additional_debian_build_packages }}
+      password_file: ${{ inputs.password_file }}
+      key_id: ${{ inputs.key_id }
+    secrets:
+      public_key: ${{ secrets.public_key }}
+      private_key: ${{ secrets.private_key }}
+      key_password: ${{ secrets.key_password }}
 
 # vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list
