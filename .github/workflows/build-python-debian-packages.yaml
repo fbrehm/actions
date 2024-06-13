@@ -248,7 +248,6 @@ jobs:
           additional_packages: ${{ inputs.additional_debian_build_packages }}
 
       - name: 'Preparing GPG for signing files without entering a password'
-        # if: ${{ secrets.public_key }} && ${{ secrets.private_key }} && ${{ secrets.key_password }} && ${{ inputs.key_id }}
         uses: ./.github/actions/setup-gpg
         with:
           public_key: ${{ secrets.public_key }}
@@ -256,6 +255,66 @@ jobs:
           key_password: ${{ secrets.key_password }}
           password_file: ${{ inputs.password_file }}
           key_id: ${{ inputs.key_id }}
+
+      - name: 'Create signing hook script of building source package.'
+        shell: bash
+        run: |
+          PKG_NAME=$( head -n 1 debian/changelog | awk '{print $1}' )
+          PKG_VERSION=$( head -n 1 debian/changelog | sed -e "s/^[^(]*(//" -e "s/).*//" )
+          SIGNING_HOOK_SCRIPT="${HOME}/signing-hook-script.sh"
+
+          echo "PKG_NAME=\"${PKG_NAME}\"" >>"$GITHUB_ENV"
+          echo "PKG_VERSION=\"${PKG_VERSION}\"" >>"$GITHUB_ENV"
+          echo "SIGNING_HOOK_SCRIPT=\"${SIGNING_HOOK_SCRIPT}\"" >>"$GITHUB_ENV"
+
+          dsc_file="${pkg_name}_${pkg_version}.dsc"
+          buildinfo_file="${pkg_name}_${pkg_version}_source.buildinfo"
+          changes_file="${pkg_name}_${pkg_version}_source.changes"
+
+          if [[ -e "${{ inputs.password_file }}" ]] ; then
+            hash_bang='#!/usr/bin/env bash'
+            shell_lines=$( cat << EOF
+            ${hash_bang}
+            echo
+            echo "This is the signing script."
+            echo
+            printf "Command line: "
+            echo $0 $*
+            printf "Pwd: "
+            pwd
+            echo
+            echo "Current sources:"
+            ls -la '${dsc_file}' '${buildinfo_file}' '${changes_file}'
+            echo
+            cmd="echo 'y' | debsign -k${{ inputs.key_id }} '${dsc_file}' '${buildinfo_file}' '${changes_file}'"
+            echo "Executing: \$cmd"
+            eval \$cmd
+            echo
+            echo "Signed sources:"
+            ls -l --color=always '${dsc_file}' '${buildinfo_file}' '${changes_file}'
+            echo
+            EOF
+            )
+
+            echo "${shell_lines}" > "${SIGNING_HOOK_SCRIPT}"
+            chmod +x --verbose "${SIGNING_HOOK_SCRIPT}"
+
+            echo -e "\nGenerated ${SIGNING_HOOK_SCRIPT}:"
+            cat "${SIGNING_HOOK_SCRIPT}:"
+            echo "<--"
+
+            echo -e "\nThe imported private keys:"
+            gpg --list-secret-keys
+            echo "<-- EOF"
+
+          else
+
+            echo -e "\nDon't create '${SIGNING_HOOK_SCRIPT}' because of failing necessary data."
+
+          fi
+
+
+
 
   ###########################
   build_debian_bin:
@@ -306,6 +365,15 @@ jobs:
         uses: fbrehm/debian-install-python-buildenv@main
         with:
           additional_packages: ${{ inputs.additional_debian_build_packages }}
+
+      - name: 'Preparing GPG for signing files without entering a password'
+        uses: ./.github/actions/setup-gpg
+        with:
+          public_key: ${{ secrets.public_key }}
+          private_key: ${{ secrets.private_key }}
+          key_password: ${{ secrets.key_password }}
+          password_file: ${{ inputs.password_file }}
+          key_id: ${{ inputs.key_id }}
 
 
 # vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list
