@@ -271,9 +271,9 @@ jobs:
           echo "PKG_VERSION=\"${PKG_VERSION}\"" >>"$GITHUB_ENV"
           echo "SIGNING_HOOK_SCRIPT=\"${SIGNING_HOOK_SCRIPT}\"" >>"$GITHUB_ENV"
 
-          dsc_file="${pkg_name}_${pkg_version}.dsc"
-          buildinfo_file="${pkg_name}_${pkg_version}_source.buildinfo"
-          changes_file="${pkg_name}_${pkg_version}_source.changes"
+          dsc_file="${PKG_NAME}_${PKG_VERSION}.dsc"
+          buildinfo_file="${PKG_NAME}_${PKG_VERSION}_source.buildinfo"
+          changes_file="${PKG_NAME}_${PKG_VERSION}_source.changes"
 
           if [[ -e "${{ inputs.password_file }}" ]] ; then
             hash_bang='#!/usr/bin/env bash'
@@ -283,7 +283,7 @@ jobs:
           	echo "This is the signing script."
           	echo
           	printf "Command line: "
-          	echo $0 $*
+          	echo \$0 \$*
           	printf "Pwd: "
           	pwd
           	echo
