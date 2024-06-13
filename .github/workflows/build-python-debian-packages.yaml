@@ -249,6 +249,7 @@ jobs:
 
       - name: 'Preparing GPG for signing files without entering a password'
         if: ${{ secrets.public_key }} && ${{ secrets.private_key }} && ${{ secrets.key_password }} && ${{ inputs.key_id }}
+        uses: ./.github/actions/setup-gpg
         with:
           public_key: ${{ secrets.public_key }}
           private_key: ${{ secrets.private_key }}
