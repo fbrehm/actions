@@ -322,7 +322,8 @@ jobs:
         run: |
           if [[ -e "${{ inputs.password_file }}" && -x "${SIGNING_HOOK_SCRIPT}" ]] ; then
             echo "::notice title=build-debian-sorce-package::Building signed Debian source package for ${PKG_NAME}-${PKG_VERSION}"
-            echo "y" | debuild --signing-hook="${SIGNING_HOOK_SCRIPT}" --build=source --diff-ignore
+            # echo "y" | debuild --signing-hook="${SIGNING_HOOK_SCRIPT}" --build=source --diff-ignore
+            echo "y" | debuild --signing-hook="${SIGNING_HOOK_SCRIPT}" -S -i
           else
             echo "::notice title=build-debian-sorce-package::Building unsigned Debian source package for ${PKG_NAME}-${PKG_VERSION}"
             debuild --build=source --diff-ignore --no-sign
