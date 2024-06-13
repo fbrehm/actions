@@ -139,6 +139,7 @@ jobs:
       additional_debian_build_packages: ${{ inputs.additional_debian_build_packages }}
       password_file: ${{ inputs.password_file }}
       key_id: ${{ inputs.key_id }}
+      retention_days: ${{ inputs.retention_days }}
     secrets:
       public_key: ${{ secrets.public_key }}
       private_key: ${{ secrets.private_key }}

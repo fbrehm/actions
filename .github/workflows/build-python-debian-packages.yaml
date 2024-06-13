@@ -45,6 +45,10 @@ on:
       key_id:
         description: 'The ID of the used private GPG key.'
         type: string
+      retention_days:
+        description: "The days for keeping the generated packages at GitHub."
+        type: number
+        default: 8
     secrets:
       public_key:
         description: 'The exported public GPG key"'
@@ -300,7 +304,7 @@ jobs:
             chmod +x --verbose "${SIGNING_HOOK_SCRIPT}"
 
             echo -e "\nGenerated ${SIGNING_HOOK_SCRIPT}:"
-            cat "${SIGNING_HOOK_SCRIPT}:"
+            cat "${SIGNING_HOOK_SCRIPT}"
             echo "<--"
 
             echo -e "\nThe imported private keys:"
@@ -313,8 +317,35 @@ jobs:
 
           fi
 
+      - name: 'Finally build the source package.'
+        shell: bash
+        run: |
+          if [[ -e "${{ inputs.password_file }}" && -x "${SIGNING_HOOK_SCRIPT}" ]] ; then
+            echo "::notice title=build-debian-sorce-package::Building signed Debian source package for ${PKG_NAME}-${PKG_VERSION}"
+            echo "y" | debuild --signing-hook="${SIGNING_HOOK_SCRIPT}" --build=source --diff-ignore
+          else
+            echo "::notice title=build-debian-sorce-package::Building unsigned Debian source package for ${PKG_NAME}-${PKG_VERSION}"
+            debuild --build=source --diff-ignore --no-sign
+          fi
 
+          echo -e "\nGenerated stuff:"
+          ls -lA --color=always ..
+          echo "<-- EOF"
 
+          echo -e "\nMoving all to the right place ..."
+          mkdir -pv debian/pkgs/src
+          mv -vi ../*.dsc ../*.tar.* ../*.build* ../*.changes debian/pkgs/src
+
+          echo -e "\nStuff now at the right place:"
+          ls -lA --color=always debian/pkgs/*/*
+          echo "<-- EOF"
+
+      - name: 'Upload Source Package'
+        uses: actions/upload-artifact@v4
+        with:
+          name: debian_sources
+          path: debian/pkgs/*/*
+          retention-days: ${{ inputs.retention_days }}
 
   ###########################
   build_debian_bin:
