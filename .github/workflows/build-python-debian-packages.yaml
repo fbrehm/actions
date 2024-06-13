@@ -248,7 +248,7 @@ jobs:
           additional_packages: ${{ inputs.additional_debian_build_packages }}
 
       - name: 'Preparing GPG for signing files without entering a password'
-        if: ${{ secrets.public_key }} && ${{ secrets.private_key }} && ${{ secrets.key_password }} && ${{ inputs.key_id }}
+        # if: ${{ secrets.public_key }} && ${{ secrets.private_key }} && ${{ secrets.key_password }} && ${{ inputs.key_id }}
         uses: ./.github/actions/setup-gpg
         with:
           public_key: ${{ secrets.public_key }}
