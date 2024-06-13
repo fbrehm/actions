@@ -267,9 +267,9 @@ jobs:
           PKG_VERSION=$( head -n 1 debian/changelog | sed -e "s/^[^(]*(//" -e "s/).*//" )
           SIGNING_HOOK_SCRIPT="${HOME}/signing-hook-script.sh"
 
-          echo "PKG_NAME=\"${PKG_NAME}\"" >>"$GITHUB_ENV"
-          echo "PKG_VERSION=\"${PKG_VERSION}\"" >>"$GITHUB_ENV"
-          echo "SIGNING_HOOK_SCRIPT=\"${SIGNING_HOOK_SCRIPT}\"" >>"$GITHUB_ENV"
+          echo "PKG_NAME=${PKG_NAME}" >>"$GITHUB_ENV"
+          echo "PKG_VERSION=${PKG_VERSION}" >>"$GITHUB_ENV"
+          echo "SIGNING_HOOK_SCRIPT=${SIGNING_HOOK_SCRIPT}" >>"$GITHUB_ENV"
 
           dsc_file="${PKG_NAME}_${PKG_VERSION}.dsc"
           buildinfo_file="${PKG_NAME}_${PKG_VERSION}_source.buildinfo"
