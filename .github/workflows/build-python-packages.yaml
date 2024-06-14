@@ -70,6 +70,10 @@ on:
       key_id:
         description: 'The ID of the used private GPG key.'
         type: string
+      timezone:
+        description: "The timezone used for this job."
+        type: string
+        default: 'Europe/Berlin'
     secrets:
       pypi_token:
         description: "The token to use for transmitting the package to PyPi"
@@ -140,6 +144,7 @@ jobs:
       password_file: ${{ inputs.password_file }}
       key_id: ${{ inputs.key_id }}
       retention_days: ${{ inputs.retention_days }}
+      timezone: ${{ inputs.timezone }}
     secrets:
       public_key: ${{ secrets.public_key }}
       private_key: ${{ secrets.private_key }}

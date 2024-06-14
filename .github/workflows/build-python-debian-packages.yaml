@@ -49,6 +49,10 @@ on:
         description: "The days for keeping the generated packages at GitHub."
         type: number
         default: 8
+      timezone:
+        description: "The timezone used for this job."
+        type: string
+        default: 'Europe/Berlin'
     secrets:
       public_key:
         description: 'The exported public GPG key"'
@@ -224,9 +228,17 @@ jobs:
       - name: "Checking out sources."
         uses: actions/checkout@v4
 
-      - name: "Show Environment"
+      - name: "Set and show Environment"
         shell: bash
         run: |
+          export PKG_NAME=$( head -n 1 debian/changelog | awk '{print $1}' )
+          export PKG_VERSION=$( head -n 1 debian/changelog | sed -e "s/^[^(]*(//" -e "s/).*//" )
+          export SIGNING_HOOK_SCRIPT="${HOME}/signing-hook-script.sh"
+
+          echo "PKG_NAME=${PKG_NAME}" >>"$GITHUB_ENV"
+          echo "PKG_VERSION=${PKG_VERSION}" >>"$GITHUB_ENV"
+          echo "SIGNING_HOOK_SCRIPT=${SIGNING_HOOK_SCRIPT}" >>"$GITHUB_ENV"
+
           echo "::notice::Building Debian source package on Debian ${DEBIAN_VERSION}."
           if [[ -f /etc/os-release ]] ; then
             echo -e "\nOS release for building source package:"
@@ -263,14 +275,6 @@ jobs:
       - name: 'Create signing hook script of building source package.'
         shell: bash
         run: |
-          PKG_NAME=$( head -n 1 debian/changelog | awk '{print $1}' )
-          PKG_VERSION=$( head -n 1 debian/changelog | sed -e "s/^[^(]*(//" -e "s/).*//" )
-          SIGNING_HOOK_SCRIPT="${HOME}/signing-hook-script.sh"
-
-          echo "PKG_NAME=${PKG_NAME}" >>"$GITHUB_ENV"
-          echo "PKG_VERSION=${PKG_VERSION}" >>"$GITHUB_ENV"
-          echo "SIGNING_HOOK_SCRIPT=${SIGNING_HOOK_SCRIPT}" >>"$GITHUB_ENV"
-
           dsc_file="${PKG_NAME}_${PKG_VERSION}.dsc"
           buildinfo_file="${PKG_NAME}_${PKG_VERSION}_source.buildinfo"
           changes_file="${PKG_NAME}_${PKG_VERSION}_source.changes"
@@ -281,6 +285,7 @@ jobs:
           	${hash_bang}
           	echo
           	echo "This is the signing script."
+          	echo "==========================="
           	echo
           	printf "Command line: "
           	echo \$0 \$*
@@ -288,7 +293,7 @@ jobs:
           	pwd
           	echo
           	echo "Current sources:"
-          	ls -la '${dsc_file}' '${buildinfo_file}' '${changes_file}'
+          	ls -l --color=always '${dsc_file}' '${buildinfo_file}' '${changes_file}'
           	echo
           	cmd="echo 'y' | debsign -k${{ inputs.key_id }} '${dsc_file}' '${buildinfo_file}' '${changes_file}'"
           	echo "Executing: \$cmd"
@@ -360,7 +365,9 @@ jobs:
       matrix: ${{ fromJSON(needs.define-debian-build-matrix.outputs.matrix) }}
     container: ${{ matrix.container }}
     env:
+      BUILDER: ${{ inputs.debian_fullname }} <${{ inputs.debian_email }}>
       COMPAT: ${{ matrix.compat }}
+      DEBIAN_FRONTEND: noninteractive
       DISTRIBUTOR: ${{ matrix.distributor }}
       OS_CODENAME: ${{ matrix.os_codename }}
       OS_RELEASE: ${{ matrix.os_release }}
@@ -370,9 +377,19 @@ jobs:
       - name: "Checking out sources."
         uses: actions/checkout@v4
 
-      - name: "Show Environment"
+      - name: "Set and show Environment"
         shell: bash
         run: |
+          export PKG_NAME=$( head -n 1 debian/changelog | awk '{print $1}' )
+          export PKG_VERSION=$( head -n 1 debian/changelog | sed -e "s/^[^(]*(//" -e "s/).*//" )
+          export SIGNING_HOOK_SCRIPT="${HOME}/signing-hook-script.sh"
+          export BUILD_VERSION="${PKG_VERSION}+${{ matrix.version_prefix }}"
+
+          echo "PKG_NAME=${PKG_NAME}" >>"$GITHUB_ENV"
+          echo "PKG_VERSION=${PKG_VERSION}" >>"$GITHUB_ENV"
+          echo "SIGNING_HOOK_SCRIPT=${SIGNING_HOOK_SCRIPT}" >>"$GITHUB_ENV"
+          echo "BUILD_VERSION=${BUILD_VERSION}" >>"$GITHUB_ENV"
+
           echo "::notice::Building Debian binary packages on ${OS_TITLE}."
           if [[ -f /etc/os-release ]] ; then
             echo -e "\nOS release:"
@@ -380,6 +397,13 @@ jobs:
           fi
           echo -e "\nBash enviroment:"
           env | sort
+
+      - name: 'Setting timezone'
+        if: ${{ matrix.distributor == 'Ubuntu' }}
+        run: |
+          echo -e "\nSetting system timezone to '${{ inputs.timezone }}' ..."
+          ln -fvs /usr/share/zoneinfo/${{ inputs.timezone }} /etc/localtime
+          echo -e "\nCurrent date: $( date --rfc-3339=seconds )"
 
       - name: 'Adding Debian repo definitions of Frank Brehm'
         uses: fbrehm/github-add-fb-debian-repo@main
@@ -406,6 +430,64 @@ jobs:
           key_password: ${{ secrets.key_password }}
           password_file: ${{ inputs.password_file }}
           key_id: ${{ inputs.key_id }}
+
+      - name: 'Updating Changelog'
+        shell: bash
+        run: |
+          echo -e "\nVersion to build: ${BUILD_VERSION} - Builder: ${BUILDER}"
+          msg="Build for ${{ matrix.distributor }} ${{ matrix.os_release }} - ${{ matrix.os_codename }}"
+          echo "::notice title=Build Debian binary packages::${msg}"
+
+          echo -e "\nAdding new changelog entry ..."
+          debchange --newversion "${BUILD_VERSION}" --force-bad-version --distribution "${{ matrix.os_codename }}" --urgency medium "${msg}"
+          head -n 5 debian/changelog
+
+      - name: 'Create signing hook script of building binary package.'
+        shell: bash
+        run: |
+          if [[ -e "${{ inputs.password_file }}" ]] ; then
+            hash_bang='#!/usr/bin/env bash'
+
+            shell_lines=$( cat <<-EOF
+          	${hash_bang}
+          	echo
+          	echo "This is the signing script."
+          	echo "==========================="
+          	echo
+          	printf "Command line: "
+          	echo \$0 \$*
+          	printf "Pwd: "
+          	pwd
+          	echo
+          	echo "Current packages:"
+          	ls -l --color=always *.deb
+          	echo
+          	cmd="echo 'y' | debsign -k${{ inputs.key_id }} *.deb
+          	echo "Executing: \$cmd"
+          	eval \$cmd
+          	echo
+          	echo "Signed packages:"
+          	ls -l --color=always *.deb
+          	echo
+          	EOF
+            )
+
+            echo "${shell_lines}" > "${SIGNING_HOOK_SCRIPT}"
+            chmod +x --verbose "${SIGNING_HOOK_SCRIPT}"
+
+            echo -e "\nGenerated ${SIGNING_HOOK_SCRIPT}:"
+            cat "${SIGNING_HOOK_SCRIPT}"
+            echo "<--"
+
+            echo -e "\nThe imported private keys:"
+            gpg --list-secret-keys
+            echo "<-- EOF"
+
+          else
+
+            echo -e "\nDon't create '${SIGNING_HOOK_SCRIPT}' because of failing necessary data."
+
+          fi
 
 
 # vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list
