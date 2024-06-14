@@ -327,11 +327,10 @@ jobs:
         run: |
           if [[ -e "${{ inputs.password_file }}" && -x "${SIGNING_HOOK_SCRIPT}" ]] ; then
             echo "::notice title=build-debian-sorce-package::Building signed Debian source package for ${PKG_NAME}-${PKG_VERSION}"
-            # echo "y" | debuild --signing-hook="${SIGNING_HOOK_SCRIPT}" --build=source --diff-ignore
             echo "y" | debuild --signing-hook="${SIGNING_HOOK_SCRIPT}" -S -i
           else
             echo "::notice title=build-debian-sorce-package::Building unsigned Debian source package for ${PKG_NAME}-${PKG_VERSION}"
-            debuild --build=source --diff-ignore --no-sign
+            debuild -S -i --no-sign
           fi
 
           echo -e "\nGenerated stuff:"
@@ -384,11 +383,13 @@ jobs:
           export PKG_VERSION=$( head -n 1 debian/changelog | sed -e "s/^[^(]*(//" -e "s/).*//" )
           export SIGNING_HOOK_SCRIPT="${HOME}/signing-hook-script.sh"
           export BUILD_VERSION="${PKG_VERSION}+${{ matrix.version_prefix }}"
+          export TZ="${{ inputs.timezone }}"
 
           echo "PKG_NAME=${PKG_NAME}" >>"$GITHUB_ENV"
           echo "PKG_VERSION=${PKG_VERSION}" >>"$GITHUB_ENV"
           echo "SIGNING_HOOK_SCRIPT=${SIGNING_HOOK_SCRIPT}" >>"$GITHUB_ENV"
           echo "BUILD_VERSION=${BUILD_VERSION}" >>"$GITHUB_ENV"
+          echo "TZ=${TZ}" >>"$GITHUB_ENV"
 
           echo "::notice::Building Debian binary packages on ${OS_TITLE}."
           if [[ -f /etc/os-release ]] ; then
@@ -401,7 +402,7 @@ jobs:
       - name: 'Setting timezone'
         if: ${{ matrix.distributor == 'Ubuntu' }}
         run: |
-          echo -e "\nSetting system timezone to '${{ inputs.timezone }}' ..."
+          echo -e "\nSetting system timezone to '${TZ}' ..."
           ln -fvs /usr/share/zoneinfo/${{ inputs.timezone }} /etc/localtime
           echo -e "\nCurrent date: $( date --rfc-3339=seconds )"
 
@@ -488,6 +489,40 @@ jobs:
             echo -e "\nDon't create '${SIGNING_HOOK_SCRIPT}' because of failing necessary data."
 
           fi
+
+      - name: 'Finally build the binary package.'
+        shell: bash
+        run: |
+          echo -e -n "\nSetting debian/compat to "
+          echo "${{ matrix.compat }}"
+          echo "${{ matrix.compat }}" > debian/compat
+
+          if [[ -e "${{ inputs.password_file }}" && -x "${SIGNING_HOOK_SCRIPT}" ]] ; then
+            echo "::notice title=build-debian-sorce-package::Building signed Debian binary package for ${PKG_NAME}-${BUILD_VERSION}"
+            echo "y" | debuild --signing-hook="${SIGNING_HOOK_SCRIPT}" -b -i
+          else
+            echo "::notice title=build-debian-sorce-package::Building unsigned Debian binary package for ${PKG_NAME}-${BUILD_VERSION}"
+            debuild -b -i --no-sign
+          fi
+
+          echo -e "\nGenerated stuff:"
+          ls -lA --color=always ..
+          echo "<-- EOF"
+
+          echo -e "\nMoving all to the right place ..."
+          mkdir -pv debian/pkgs/${{ matrix.version_prefix }}
+          mv -vi ../*.deb ../*.build* debian/pkgs/${{ matrix.version_prefix }}
+
+          echo -e "\nStuff now at the right place:"
+          ls -lA --color=always debian/pkgs/*/*
+          echo "<-- EOF"
+
+      - name: 'Upload Source Package'
+        uses: actions/upload-artifact@v4
+        with:
+          name: debian_bin_pkgs_${{ matrix.version_prefix }}
+          path: debian/pkgs/*/*
+          retention-days: ${{ inputs.retention_days }}
 
 
 # vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list
