@@ -463,7 +463,7 @@ jobs:
           	echo "Current packages:"
           	ls -l --color=always *.deb
           	echo
-          	cmd="echo 'y' | debsign -k${{ inputs.key_id }} *.deb"
+          	cmd="debsigs --sign=origin --default-key=k${{ inputs.key_id }} *.deb"
           	echo "Executing: \$cmd"
           	eval \$cmd
           	echo
