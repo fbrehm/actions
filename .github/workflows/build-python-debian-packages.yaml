@@ -460,10 +460,13 @@ jobs:
           	printf "Pwd: "
           	pwd
           	echo
+          	echo "Avaiable secret keys:"
+          	gpg --list-secret-keys
+          	echo
           	echo "Current packages:"
           	ls -l --color=always *.deb
           	echo
-          	cmd="debsigs --sign=origin --default-key=k${{ inputs.key_id }} *.deb"
+          	cmd="debsigs --sign=origin --default-key=${{ inputs.key_id }} *.deb"
           	echo "Executing: \$cmd"
           	eval \$cmd
           	echo
