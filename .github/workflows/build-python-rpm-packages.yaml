@@ -256,4 +256,51 @@ jobs:
           root_path: ${{ inputs.own_repo_root_path }}
           el_major_version: ${{ matrix.el_version }}
 
+      - name: "Enabling PowerTools YUM repo"
+        shell: bash
+        run: |
+          echo -e "All current installed YUM repo definitions:"
+          dnf repolist --all
+
+          if [[ -f /etc/yum.repos.d/CentOS-Stream-PowerTools.repo ]] ; then
+              echo -e "\nEnabling powertools YUM repo ..."
+              sed -i -e 's/^enabled=.*/enabled=1/' /etc/yum.repos.d/CentOS-Stream-PowerTools.repo
+              echo -e "\nContent of /etc/yum.repos.d/CentOS-Stream-PowerTools.repo:"
+              cat /etc/yum.repos.d/CentOS-Stream-PowerTools.repo
+              echo "<--"
+          fi
+
+      - name: "Install EPEL repo"
+        shell: bash
+        run: dnf --assumeyes install "${{ matrix.epel_package }}"
+
+      - name: "Upgrade all packages"
+        shell: bash
+        env:
+          LC_ALL: "en_US.utf8"
+        run: |
+          echo -e "\nCleaning dnf ..."
+          dnf clean all
+
+          echo -e "\ndnf makecache ..."
+          dnf makecache
+
+          echo -e "\nUpgrading all packages"
+          dnf --assumeyes upgrade
+
+      - name: Install TZdata
+        shell: bash
+        env:
+          LC_ALL: "en_US.utf8"
+        run: |
+          if rpm -qa | grep '^tzdata-' >/dev/null ; then
+            echo -e "\nReinstalling tzdata ..."
+            dnf --assumeyes reinstall tzdata || true
+          else
+            echo -e "\nInstalling tzdata ..."
+            dnf --assumeyes install tzdata || true
+          fi
+          echo -e "\nFile /usr/share/zoneinfo/zone.tab:"
+          ls -l --color=always /usr/share/zoneinfo/zone.tab
+
 # vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list
