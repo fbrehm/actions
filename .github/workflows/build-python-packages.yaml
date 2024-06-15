@@ -201,7 +201,7 @@ jobs:
       own_repo_server_use_https: ${{ inputs.own_yum_repo_server_use_https }}
       own_repo_name: ${{ inputs.own_yum_repo_name }}
       own_repo_description: ${{ inputs.own_yum_repo_description }}
-      own_repo_root_path: ${{ inputs.own_yum_repo_path }}
+      own_repo_root_path: ${{ inputs.own_yum_repo_root_path }}
     secrets:
       public_key: ${{ secrets.public_key }}
       private_key: ${{ secrets.private_key }}

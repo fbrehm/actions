@@ -247,7 +247,7 @@ jobs:
           env | sort
 
       - name: "Adding own YUM repository"
-        uses: ./.github/actions/add-fb-yum-repo
+        uses: ./.github/actions/add-own-yum-repo
         with:
           use_https: ${{ inputs.own_repo_server_use_https }}
           repo_server: ${{ inputs.own_repo_server }}
