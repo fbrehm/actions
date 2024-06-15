@@ -197,7 +197,7 @@ jobs:
       retention_days: ${{ inputs.retention_days }}
       timezone: ${{ inputs.timezone }}
       own_repo_server: ${{ inputs.own_yum_repo_server }}
-      own_repo_server_use_https: ${{ inputs.own_yum_repo_server__use_https }}
+      own_repo_server_use_https: ${{ inputs.own_yum_repo_server_use_https }}
       own_repo_name: ${{ inputs.own_yum_repo_name }}
       own_repo_description: ${{ inputs.own_yum_repo_description }}
       own_repo_root_path: ${{ inputs.own_yum_repo_path }}
