@@ -234,7 +234,7 @@ jobs:
               echo " * en"
               if [[ -n "${ADDITIONAL_LOCALES}" ]] ; then
                   for my_lc in "${ADDITIONAL_LOCALES}" ; do
-                      base_lang=$( "${my_lc}" | sed -e 's/\..*//'  -e 's/_.*//' )"
+                      base_lang=$( "${my_lc}" | sed -e 's/\..*//'  -e 's/_.*//' )
                       echo " * ${base_lang}"
                       langpack="langpacks-${base_lang}"
                       langpacks+=" ${langpack}"
