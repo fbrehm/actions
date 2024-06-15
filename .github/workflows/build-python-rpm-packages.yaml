@@ -175,5 +175,84 @@ jobs:
           echo "matrix=${matrix_json}" >> ${GITHUB_OUTPUT}
           echo "::debug::Using Matrix: $( cat ${GITHUB_OUTPUT} )"
 
+  ###########################
+  build-rpm:
+    runs-on: ubuntu-latest
+    name: Building RPM packages for Enterprise Linux ${{ matrix.el_version }}
+    if: ${{ github.ref_name == 'main' || github.ref_name == 'master' || startsWith(github.ref_name, 'test') || github.ref_name == 'dev/workflow' || startsWith(github.ref, 'refs/tags/')  }}
+    needs:
+      - define-rpm-build-matrix
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.define-debian-build-matrix.outputs.matrix) }}
+    env:
+      PYTHON: "python${{ matrix.py_version_nodot}}"
+      USED_CHARSET: 'utf8'
+      USED_LOCALE: 'en_US'
+      USED_LC: 'en_US.utf8'
+      ADDITIONAL_LOCALES: ${{ inputs.additional_locales }}
+    container: ${{ matrix.container }}
+
+    steps:
+      - name: "Checking out sources."
+        uses: actions/checkout@v4
+
+      - name: "Set and show Environment"
+        shell: bash
+        run: |
+          export PKG_NAME=$( head -n 1 debian/changelog | awk '{print $1}' )
+          export PKG_VERSION=$( head -n 1 debian/changelog | sed -e "s/^[^(]*(//" -e "s/).*//" )
+          export OS_TITLE=$( cat /etc/os-release | grep '^PRETTY_NAME=' | sed -e 's/^PRETTY_NAME=//' -e 's/"//g' )
+          export TZ="${{ inputs.timezone }}"
+
+          echo "OS_TITLE=${OS_TITLE}" >>"$GITHUB_ENV"
+          echo "PKG_NAME=${PKG_NAME}" >>"$GITHUB_ENV"
+          echo "PKG_VERSION=${PKG_VERSION}" >>"$GITHUB_ENV"
+          echo "TZ=${TZ}" >>"$GITHUB_ENV"
+
+          echo "::notice::Building RPM packages on ${OS_TITLE}."
+          echo -e "\nOS release:"
+          cat /etc/os-release
+          echo "<--"
+
+          echo -e "\nAll locales:"
+          locale -a
+          echo -e "\nInstalling locales ..."
+          if [[ "${{ matrix.el_version }}" == "7" ]] ; then
+              echo " * ${USED_LOCALE}.${USED_CHARSET}"
+              localedef --charmap UTF-8 --inputfile "${USED_LOCALE}" "${USED_LC}"
+
+              if [[ -n "${ADDITIONAL_LOCALES}" ]] ; then
+                  for my_lc in "${ADDITIONAL_LOCALES}" ; do
+                      my_locale=$( echo "${my_lc}" | sed -e 's/\..*//' )
+                      echo " * ${my_lc}"
+                      localedef --charmap UTF-8 --inputfile "${my_locale}" "${my_lc}"
+                  done
+              fi
+          else
+              langpacks='langpacks-en'
+              echo " * en"
+              if [[ -n "${ADDITIONAL_LOCALES}" ]] ; then
+                  for my_lc in "${ADDITIONAL_LOCALES}" ; do
+                      base_lang=$( "${my_lc}" | sed -e 's/\..*//'  -e 's/_.*//' )"
+                      echo " * ${base_lang}"
+                      langpack="langpacks-${base_lang}"
+                      langpacks+=" ${langpack}"
+                  done
+              fi
+              echo "Installing language packs ${langpacks}"
+              ${{ matrix.yum }} --assumeyes install glibc-all-langpacks ${langpacks}
+          fi
+          echo -e "\nAll locales:"
+          locale -a
+          echo -e "\nCurrent locales:"
+          locale
+          export LC_ALL="${USED_LC}"
+          echo "LC_ALL=${LC_ALL}" >>"$GITHUB_ENV"
+          echo -e "\nCurrent locales again:"
+          locale
+
+          echo -e "\nBash enviroment:"
+          env | sort
 
 # vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list
