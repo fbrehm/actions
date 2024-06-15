@@ -100,6 +100,7 @@ on:
       own_yum_repo_root_path:
         description: 'The root path on the own YUM repository server.'
         type: string
+        default: '/Yum'
     secrets:
       pypi_token:
         description: "The token to use for transmitting the package to PyPi"
