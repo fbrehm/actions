@@ -86,7 +86,7 @@ on:
         type: string
         default: 'repo.uhu-banane.de'
       own_yum_repo_server_use_https:
-        description:  'Use HTTPS instead of HTTP as the URL schema for the own YUM repo server.'
+        description: 'Use HTTPS instead of HTTP as the URL schema for the own YUM repo server.'
         type: boolean
         default: false
       own_yum_repo_name:
