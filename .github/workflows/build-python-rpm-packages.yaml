@@ -184,7 +184,7 @@ jobs:
       - define-rpm-build-matrix
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.define-debian-build-matrix.outputs.matrix) }}
+      matrix: ${{ fromJSON(needs.define-rpm-build-matrix.outputs.matrix) }}
     env:
       PYTHON: "python${{ matrix.py_version_nodot}}"
       USED_CHARSET: 'utf8'
