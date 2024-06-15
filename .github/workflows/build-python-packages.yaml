@@ -60,8 +60,15 @@ on:
         description: 'Whitespace separated list of Debian and Ubuntu version to build the package for.'
         type: string
         default: 'debian-bullseye debian-bookworm debian-trixie ubuntu-focal ubuntu-jammy ubuntu-noble'
+      el_versions:
+        description: 'Whitespace separated list of Enterprise Linux versions to build the package for.'
+        type: string
+        default: 'el-7 el-8 el-9'
       additional_debian_build_packages:
-        description: "A withespace separated list of packages additional to the base build packages"
+        description: "A withespace separated list of Debian packages additional to the base build packages"
+        type: string
+      additional_rpm_build_packages:
+        description: "A withespace separated list of RPM packages additional to the base build packages"
         type: string
       password_file:
         description: 'The file containing the password of the private GPG key.'
@@ -138,6 +145,7 @@ jobs:
       debian_fullname: ${{ inputs.debian_fullname }}
       has_i18n: ${{ inputs.has_i18n }}
       languages: ${{ inputs.languages }}
+      additional_locales: ${{ inputs.additional_locales }}
       latest_debian_version: ${{ inputs.latest_debian_version }}
       debian_versions: ${{ inputs.debian_versions }}
       additional_debian_build_packages: ${{ inputs.additional_debian_build_packages }}
@@ -149,5 +157,30 @@ jobs:
       public_key: ${{ secrets.public_key }}
       private_key: ${{ secrets.private_key }}
       key_password: ${{ secrets.key_password }}
+
+  ###########################
+  build-rpm-packages:
+    name: "Building RPM packages"
+    uses: ./.github/workflows/build-python-rpm-packages.yaml
+    needs:
+      - exec-python-linter
+    with:
+      debian_email: ${{ inputs.debian_email }}
+      debian_fullname: ${{ inputs.debian_fullname }}
+      has_i18n: ${{ inputs.has_i18n }}
+      languages: ${{ inputs.languages }}
+      additional_locales: ${{ inputs.additional_locales }}
+      latest_debian_version: ${{ inputs.latest_debian_version }}
+      el_versions: ${{ inputs.el_versions }}
+      additional_rpm_build_packages: ${{ inputs.additional_rpm_build_packages }}
+      password_file: ${{ inputs.password_file }}
+      key_id: ${{ inputs.key_id }}
+      retention_days: ${{ inputs.retention_days }}
+      timezone: ${{ inputs.timezone }}
+    secrets:
+      public_key: ${{ secrets.public_key }}
+      private_key: ${{ secrets.private_key }}
+      key_password: ${{ secrets.key_password }}
+
 
 # vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list

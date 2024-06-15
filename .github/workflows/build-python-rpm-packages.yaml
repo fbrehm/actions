@@ -35,7 +35,7 @@ on:
         description: 'Whitespace separated list of Enterprise Linux versions to build the package for.'
         type: string
         default: 'el-7 el-8 el-9'
-      additional_debian_build_packages:
+      additional_rpm_build_packages:
         description: "A withespace separated list of packages additional to the base build packages"
         type: string
       password_file:
