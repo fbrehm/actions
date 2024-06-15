@@ -1,0 +1,73 @@
+---
+
+name: "Building Debian packages of a Python source package."
+
+################################################################################
+# yamllint disable-line rule:truthy
+on:
+  workflow_call:
+    inputs:
+      debian_email:
+        description: 'The mail address of the user, which will be used to update debian/chagelog.'
+        type: string
+        default: 'frank@brehm-online.com'
+      debian_fullname:
+        description: 'A human readable name of the user, which will be used to update debian/chagelog.'
+        type: string
+        default: 'Frank Brehm'
+      has_i18n:
+        description: 'Does the package support localisation and internationalisation?'
+        type: boolean
+        default: true
+      languages:
+        description: 'A list of languages, which will be supported, if has_i18n is true.'
+        type: string
+        default: '["de_DE.UTF-8", "en_US.UTF-8"]'
+      additional_locales:
+        description: 'A whitespace separated list of additional locales (except en_US.UTF-8)'
+        type: string
+        default: 'de_DE.UTF-8'
+      latest_debian_version:
+        description: 'The short name of the latest stable Debian version.'
+        type: string
+        default: 'bookworm'
+      el_versions:
+        description: 'Whitespace separated list of Enterprise Linux versions to build the package for.'
+        type: string
+        default: 'el-7 el-8 el-9'
+      additional_debian_build_packages:
+        description: "A withespace separated list of packages additional to the base build packages"
+        type: string
+      password_file:
+        description: 'The file containing the password of the private GPG key.'
+        type: string
+        default: '.private/uhu.txt'
+      key_id:
+        description: 'The ID of the used private GPG key.'
+        type: string
+      retention_days:
+        description: "The days for keeping the generated packages at GitHub."
+        type: number
+        default: 8
+      timezone:
+        description: "The timezone used for this job."
+        type: string
+        default: 'Europe/Berlin'
+    secrets:
+      public_key:
+        description: 'The exported public GPG key"'
+      private_key:
+        description: 'The exported private GPG key"'
+      key_password:
+        description: 'The password of the imported private GPG key.'
+
+################################################################################
+env:
+  DEBFULLNAME: ${{ inputs.debian_fullname }}
+  DEBEMAIL: ${{ inputs.debian_email }}
+  GIT_REF: ${{ github.ref }}
+  GIT_REFNAME: ${{ github.ref_name }}
+  GIT_REFTYPE: ${{ github.ref_type }}
+
+
+# vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list

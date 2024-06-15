@@ -32,7 +32,7 @@ on:
         type: string
         default: 'bookworm'
       debian_versions:
-        description: 'Whitespace separated list of Debian and Ubuntu version to build the package for.'
+        description: 'Whitespace separated list of Debian and Ubuntu versions to build the package for.'
         type: string
         default: 'debian-bullseye debian-bookworm debian-trixie ubuntu-focal ubuntu-jammy ubuntu-noble'
       additional_debian_build_packages:
