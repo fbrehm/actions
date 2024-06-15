@@ -34,7 +34,7 @@ on:
       el_versions:
         description: 'Whitespace separated list of Enterprise Linux versions to build the package for.'
         type: string
-        default: 'el-7 el-8 el-9'
+        default: 'el-8 el-9'
       additional_rpm_build_packages:
         description: "A withespace separated list of packages additional to the base build packages"
         type: string
@@ -131,22 +131,6 @@ jobs:
             el_version_lc=$( echo "${el_version}" | tr '[:upper:]' '[:lower:]' )
             echo "::debug::Performing Enterprise Linux version '${el_version}' -> '${el_version_lc}'"
             case "${el_version_lc}" in
-              el-7|el7)
-                if [[ "${first_distro}" != 'y' ]] ; then
-                  matrix_json+=", "
-                fi
-                matrix_json+="{"
-                matrix_json+="\"title\": \"Enterprise Linux 7\", "
-                matrix_json+="\"el_version\": \"7\", "
-                matrix_json+="\"yum\": \"yum\", "
-                matrix_json+="\"py_minor_version\": \"6\", "
-                matrix_json+="\"py_version_dot\": \"3.6\", "
-                matrix_json+="\"py_version_nodot\": \"36\", "
-                matrix_json+="\"container\": \"centos:7\", "
-                matrix_json+="\"epel_package\": \"epel-release\""
-                matrix_json+="}"
-                echo "::notice title=Define RPM build matrix::Adding Enterprise Linux 7"
-                ;;
               el-8|el8)
                 if [[ "${first_distro}" != 'y' ]] ; then
                   matrix_json+=", "
@@ -198,7 +182,7 @@ jobs:
   ###########################
   build-rpm:
     runs-on: ubuntu-latest
-    name: Building RPM packages for Enterprise Linux ${{ matrix.el_version }}
+    name: Build RPM packages for EL ${{ matrix.el_version }}
     if: ${{ github.ref_name == 'main' || github.ref_name == 'master' || startsWith(github.ref_name, 'test') || github.ref_name == 'dev/workflow' || startsWith(github.ref, 'refs/tags/')  }}
     needs:
       - define-rpm-build-matrix
@@ -238,31 +222,18 @@ jobs:
           echo -e "\nAll locales:"
           locale -a
           echo -e "\nInstalling locales ..."
-          if [[ "${{ matrix.el_version }}" == "7" ]] ; then
-              echo " * ${USED_LOCALE}.${USED_CHARSET}"
-              localedef --charmap UTF-8 --inputfile "${USED_LOCALE}" "${USED_LC}"
-
-              if [[ -n "${ADDITIONAL_LOCALES}" ]] ; then
-                  for my_lc in "${ADDITIONAL_LOCALES}" ; do
-                      my_locale=$( echo "${my_lc}" | sed -e 's/\..*//' )
-                      echo " * ${my_lc}"
-                      localedef --charmap UTF-8 --inputfile "${my_locale}" "${my_lc}"
-                  done
-              fi
-          else
-              langpacks='langpacks-en'
-              echo " * en"
-              if [[ -n "${ADDITIONAL_LOCALES}" ]] ; then
-                  for my_lc in "${ADDITIONAL_LOCALES}" ; do
-                      base_lang=$( echo "${my_lc}" | sed -e 's/\..*//'  -e 's/_.*//' )
-                      echo " * ${base_lang}"
-                      langpack="langpacks-${base_lang}"
-                      langpacks+=" ${langpack}"
-                  done
-              fi
-              echo "Installing language packs ${langpacks}"
-              ${{ matrix.yum }} --assumeyes install glibc-all-langpacks ${langpacks}
+          langpacks='langpacks-en'
+          echo " * en"
+          if [[ -n "${ADDITIONAL_LOCALES}" ]] ; then
+              for my_lc in "${ADDITIONAL_LOCALES}" ; do
+                  base_lang=$( echo "${my_lc}" | sed -e 's/\..*//'  -e 's/_.*//' )
+                  echo " * ${base_lang}"
+                  langpack="langpacks-${base_lang}"
+                  langpacks+=" ${langpack}"
+              done
           fi
+          echo "Installing language packs ${langpacks}"
+          ${{ matrix.yum }} --assumeyes install glibc-all-langpacks ${langpacks}
           echo -e "\nAll locales:"
           locale -a
           echo -e "\nCurrent locales:"
