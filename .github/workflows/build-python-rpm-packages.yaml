@@ -53,6 +53,26 @@ on:
         description: "The timezone used for this job."
         type: string
         default: 'Europe/Berlin'
+      own_repo_server:
+        description: 'The FQDN of the own YUM repository server.'
+        type: string
+        default: 'repo.uhu-banane.de'
+      own_repo_server_use_https:
+        description:  'Use HTTPS instead of HTTP as the URL schema for the own repo server.'
+        type: boolean
+        default: false
+      own_repo_name:
+        description: 'The name of the own Yum repository'
+        type: string
+        default: 'frank-brehm'
+      own_repo_description:
+        description: 'The verbose description of the own Yum repository'
+        type: string
+        default: 'Frank Brehms Yum repository for Enterprise Linux %s'
+      own_repo_root_path:
+        description: 'The root path on the own YUM repository server.'
+        type: string
+    default: '/Yum'
     secrets:
       public_key:
         description: 'The exported public GPG key"'
@@ -254,5 +274,15 @@ jobs:
 
           echo -e "\nBash enviroment:"
           env | sort
+
+      - name: "Adding own YUM repository"
+        uses: ./.github/actions/add-fb-yum-repo
+        with:
+          use_https: ${{ inputs.own_repo_server_use_https }}
+          repo_server: ${{ inputs.own_repo_server }}
+          repo_name: ${{ inputs.own_repo_name }}
+          repo_description: ${{ inputs.own_repo_description }}
+          root_path: ${{ inputs.own_repo_root_path }}
+          el_major_version: ${{ matrix.el_version }}
 
 # vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list

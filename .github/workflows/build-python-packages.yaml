@@ -81,6 +81,25 @@ on:
         description: "The timezone used for this job."
         type: string
         default: 'Europe/Berlin'
+      own_yum_repo_server:
+        description: 'The FQDN of the own YUM repository server.'
+        type: string
+        default: 'repo.uhu-banane.de'
+      own_yum_repo_server_use_https:
+        description:  'Use HTTPS instead of HTTP as the URL schema for the own YUM repo server.'
+        type: boolean
+        default: false
+      own_yum_repo_name:
+        description: 'The name of the own Yum repository'
+        type: string
+        default: 'frank-brehm'
+      own_yum_repo_description:
+        description: 'The verbose description of the own Yum repository'
+        type: string
+        default: 'Frank Brehms Yum repository for Enterprise Linux %s'
+      own_yum_repo_root_path:
+        description: 'The root path on the own YUM repository server.'
+        type: string
     secrets:
       pypi_token:
         description: "The token to use for transmitting the package to PyPi"
@@ -177,6 +196,11 @@ jobs:
       key_id: ${{ inputs.key_id }}
       retention_days: ${{ inputs.retention_days }}
       timezone: ${{ inputs.timezone }}
+      own_repo_server: ${{ inputs.own_yum_repo_server }}
+      own_repo_server_use_https: ${{ inputs.own_yum_repo_server__use_https }}
+      own_repo_name: ${{ inputs.own_yum_repo_name }}
+      own_repo_description: ${{ inputs.own_yum_repo_description }}
+      own_repo_root_path: ${{ inputs.own_yum_repo_path }}
     secrets:
       public_key: ${{ secrets.public_key }}
       private_key: ${{ secrets.private_key }}
