@@ -72,7 +72,7 @@ on:
       own_repo_root_path:
         description: 'The root path on the own YUM repository server.'
         type: string
-    default: '/Yum'
+        default: '/Yum'
     secrets:
       public_key:
         description: 'The exported public GPG key"'
