@@ -1,0 +1,76 @@
+---
+
+name: 'Adding Yum repo definitions of Frank Brehm'
+author: 'Frank Brehm'
+description: 'Adding Yum repository definitions for the Repo server of Frank Brehm'
+
+inputs:
+  use_https:
+    description: 'Use HTTPS instead of HTTP as the URL schema.'
+    type: boolean
+    required: false
+    default: false
+  repo_server:
+    description: 'The FQDN of the repository server.'
+    required: false
+    default: 'repo.uhu-banane.de'
+  repo_name:
+    description: 'The name of the Yum repository'
+    required: false
+    default: 'frank-brehm'
+  repo_description:
+    description: 'The verbose description of the Yum repository'
+    required: false
+    default: 'Frank Brehms Yum repository for Enterprise Linux %s'
+  root_path:
+    description: 'The root path on the repository server.'
+    required: false
+    default: '/Yum'
+  el_major_version:
+    description: 'The major version of the Enterprise Linux, for which this repo is destinated.'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Creating repo file
+      shell: bash
+      env:
+        USE_HTTPS: ${{ inputs.use_https }}
+        REPO_SERVER: ${{ inputs.repo_server }}
+        REPO_NAME: ${{ inputs.repo_name }}
+        REPO_DESC: ${{ inputs.repo_description }}
+        ROOT_PATH: ${{ inputs.root_path }}
+        EL_MAJOR_VERSION: ${{ inputs.el_major_version }}
+      run: |
+        if [[ ! -d /etc/yum.repos.d/ ]] ; then
+            echo "::error title=add-fb-yum-repo::Directory '/etc/yum.repos.d' not found or is not a directory."
+            exit 5
+        fi
+
+        URL="https://"
+        if [[ "${USE_HTTPS}" == false ]] ; then
+            URL="http://"
+        fi
+        URL+="${{ inputs.repo_server }}${{ inputs.root_path }}/el-${{ inputs.el_major_version }}"
+
+        REPO_FILE="/etc/yum.repos.d/${{ inputs.repo_name }}.repo"
+        DESC=$( printf "${{ inputs.repo_description }}" "${{ inputs.el_major_version }}" )
+
+        echo -e "\nCreating '${REPO_FILE}' ..."
+        lines=$( cat <<-EOF
+      		[${{ inputs.repo_name }}]
+      		name=${DESC}
+      		baseurl=${URL}"
+      		enabled=1
+      		gpgcheck=0
+      		repo_gpgcheck=0
+      		EOF
+        )
+        echo "${lines}" > "${REPO_FILE}"
+
+        echo -e "\nContent of '${REPO_FILE}':"
+        cat "${REPO_FILE}"
+        echo "<--"
+
+# vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list
