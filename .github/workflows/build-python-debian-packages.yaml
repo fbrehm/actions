@@ -76,6 +76,7 @@ jobs:
   define-debian-build-matrix:
     name: "Defining the Matrix for building Debian packages"
     runs-on: ubuntu-latest
+    if: ${{ github.ref_name == 'main' || github.ref_name == 'master' || startsWith(github.ref_name, 'test') || github.ref_name == 'dev/workflow' || startsWith(github.ref, 'refs/tags/')  }}
     container: debian:${{ inputs.latest_debian_version }}
     env:
       DEBIAN_VERSIONS: ${{ inputs.debian_versions }}
