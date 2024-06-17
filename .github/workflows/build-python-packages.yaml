@@ -104,6 +104,7 @@ on:
       do_help2man:
         description: 'Generate man pages of scripts by calling help2man'
         type: boolean
+        default: true
     secrets:
       pypi_token:
         description: "The token to use for transmitting the package to PyPi"
