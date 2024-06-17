@@ -242,8 +242,10 @@ jobs:
                   langpacks+=" ${langpack}"
               done
           fi
-          echo "Installing language packs ${langpacks}"
-          ${{ matrix.yum }} --assumeyes install glibc-all-langpacks ${langpacks}
+          echo -e "\nInstalling language packs ${langpacks}"
+          cmd="dnf ${DNF_ENABLE_REPO} --assumeyes install glibc-all-langpacks ${langpacks}"
+          echo -e "\nCalling: ${cmd}"
+          eval ${cmd}
           echo -e "\nAll locales:"
           locale -a
           echo -e "\nCurrent locales:"
@@ -412,5 +414,15 @@ jobs:
           mkdir -pv rpmdir
           mkdir -pv rpmdir/SOURCES
 
+          workdir=$(pwd)
+          root_objects=$( ls -A1 | egrep -vw ".git|rpmdir" )
+          echo -e "\nRoot objects:"
+          for o in ${root_objects} ; do
+              echo " * ${o}"
+          done
+
+          RPM_SRC_DIR="python${PY_VERSION_NODOT}_${PKG_NAME}-${PKG_VERSION}"
+          echo -e "Ensuring RPM source dir 'rpmdir/SOURCES/${RPM_SRC_DIR}' ..."
+          mkdir -pv "rpmdir/SOURCES/${RPM_SRC_DIR}"
 
 # vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list
