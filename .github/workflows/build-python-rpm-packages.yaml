@@ -206,12 +206,16 @@ jobs:
         run: |
           export PKG_NAME=$( head -n 1 debian/changelog | awk '{print $1}' )
           export PKG_VERSION=$( head -n 1 debian/changelog | sed -e "s/^[^(]*(//" -e "s/).*//" )
+          export PKG_RELEASE=$( ./get-rpm-release )
+          export PKG_BUILD_VERSION="${PKG_VERSION}-${PKG_RELEASE}"
           export OS_TITLE=$( cat /etc/os-release | grep '^PRETTY_NAME=' | sed -e 's/^PRETTY_NAME=//' -e 's/"//g' )
           export TZ="${{ inputs.timezone }}"
 
           echo "OS_TITLE=${OS_TITLE}" >>"$GITHUB_ENV"
           echo "PKG_NAME=${PKG_NAME}" >>"$GITHUB_ENV"
           echo "PKG_VERSION=${PKG_VERSION}" >>"$GITHUB_ENV"
+          echo "PKG_RELEASE=${PKG_RELEASE}" >>"$GITHUB_ENV"
+          echo "PKG_BUILD_VERSION=${PKG_BUILD_VERSION}" >>"$GITHUB_ENV"
           echo "TZ=${TZ}" >>"$GITHUB_ENV"
 
           echo "::notice::Building RPM packages on ${OS_TITLE}."
@@ -333,10 +337,8 @@ jobs:
           echo -e "\nUpgrading all packages"
           dnf --assumeyes upgrade
 
-      - name: Install TZdata
+      - name: 'Install TZdata'
         shell: bash
-        env:
-          LC_ALL: "en_US.utf8"
         run: |
           if rpm -qa | grep '^tzdata-' >/dev/null ; then
             echo -e "\nReinstalling tzdata ..."
@@ -347,5 +349,43 @@ jobs:
           fi
           echo -e "\nFile /usr/share/zoneinfo/zone.tab:"
           ls -l --color=always /usr/share/zoneinfo/zone.tab
+
+      - name: 'Install Python 3'
+        shell: bash
+        run: |
+          echo "Installing Python ${{ matrix.py_version_nodot}} ..."
+          yum --assumeyes install ${PYTHON} \
+                                  ${PYTHON}-setuptools \
+                                  ${PYTHON}-pip \
+                                  ${PYTHON}-devel \
+                                  ${PYTHON}-babel \
+                                  ${PYTHON}-pytz \
+                                  ${PYTHON}-chardet \
+                                  ${PYTHON}-six \
+                                  ${PYTHON}-fb-logging
+          echo -e "\nPython binaries:"
+          ls -l --color=always /bin/python* /bin/pip* || true
+
+          echo -e "\nInstalling Python-Debian with pip3 ..."
+          pip3 install python-debian packaging
+
+          echo -e "\nPip3 list:"
+          pip3 list --format columns
+
+      - name: 'Installing build tools'
+        shell: bash
+        run: |
+          echo "Installing build tools"
+          yum --assumeyes install gnupg2 rpm-build gettext help2man
+
+      - name: 'Create build environment'
+        shell: bash
+        run: |
+          echo -e "\nVersion to build: ${PKG_BUILD_VERSION}"
+
+          echo -e "\nCreating RPMDIR ..."
+          mkdir -pv rpmdir
+          mkdir -pv rpmdir/SOURCES
+
 
 # vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list
