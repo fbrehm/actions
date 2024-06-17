@@ -386,6 +386,26 @@ jobs:
           echo -e "\nCalling: ${cmd}"
           eval ${cmd}
 
+      - name: 'Installing additional packages.'
+        if: ${{ inputs.additional_rpm_build_packages }}
+        shell: bash
+        run: |
+          echo -e "\nInstalling additional packages ..."
+
+          pkgs=''
+          for pkg_orig in ${{ inputs.additional_rpm_build_packages }} ; do
+              pkg=$( echo "${pkg_orig}" | sed -e "s/^python3X/python${{ matrix.py_version_nodot}}/" )
+              if [[ -z "{pkgs}" ]] ; then
+                  pkgs="${pkg}"
+              else
+                  pkgs+=" ${pkg}"
+              fi
+          done
+
+A         cmd="dnf ${DNF_ENABLE_REPO} --assumeyes install ${pkgs}"
+          echo -e "\nCalling: ${cmd}"
+          eval ${cmd}
+
       - name: 'Creating man pages'
         if: ${{ inputs.do_help2man }}
         shell: bash
