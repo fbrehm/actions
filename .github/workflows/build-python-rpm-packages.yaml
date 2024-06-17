@@ -298,11 +298,20 @@ jobs:
           echo -e "All current installed YUM repo definitions:"
           dnf repolist --all
 
-          if [[ -f /etc/yum.repos.d/CentOS-Stream-PowerTools.repo ]] ; then
+          pt_repofile=
+          for repofile in /etc/yum.repos.d/*.repo ; do
+              if grep -q '^\[powertools\]' "${repofile}" ; then
+                  echo -e "\nFound repo file for powertools YUM repository '${repofile}'."
+                  pt_repofile="${repofile}"
+                  break
+              fi
+          done
+
+          if [[ -n "${pt_repofile}" ]] ; then
               echo -e "\nEnabling powertools YUM repo ..."
-              sed -i -e 's/^enabled=.*/enabled=1/' /etc/yum.repos.d/CentOS-Stream-PowerTools.repo
-              echo -e "\nContent of /etc/yum.repos.d/CentOS-Stream-PowerTools.repo:"
-              cat /etc/yum.repos.d/CentOS-Stream-PowerTools.repo
+              sed -i -e 's/^enabled=.*/enabled=1/' "${pt_repofile}"
+              echo -e "\nModified content of ${pt_repofile}:"
+              cat "${pt_repofile}"
               echo "<--"
           fi
 
