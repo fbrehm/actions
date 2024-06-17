@@ -138,11 +138,11 @@ jobs:
                 matrix_json+="{"
                 matrix_json+="\"title\": \"Enterprise Linux 8\", "
                 matrix_json+="\"el_version\": \"8\", "
-                matrix_json+="\"yum\": \"dnf\", "
                 matrix_json+="\"py_minor_version\": \"8\", "
                 matrix_json+="\"py_version_dot\": \"3.8\", "
                 matrix_json+="\"py_version_nodot\": \"38\", "
                 matrix_json+="\"container\": \"rockylinux:8\", "
+                matrix_json+="\"has_powertools\": \"true\", "
                 matrix_json+="\"epel_package\": \"epel-release\""
                 matrix_json+="}"
                 echo "::notice title=Define RPM build matrix::Adding Enterprise Linux 8"
@@ -154,11 +154,11 @@ jobs:
                 matrix_json+="{"
                 matrix_json+="\"title\": \"Enterprise Linux 9\", "
                 matrix_json+="\"el_version\": \"9\", "
-                matrix_json+="\"yum\": \"dnf\", "
                 matrix_json+="\"py_minor_version\": \"9\", "
                 matrix_json+="\"py_version_dot\": \"3\", "
                 matrix_json+="\"py_version_nodot\": \"3\", "
                 matrix_json+="\"container\": \"rockylinux:9\", "
+                matrix_json+="\"has_powertools\": \"false\", "
                 matrix_json+="\"epel_package\": \"epel-release\""
                 matrix_json+="}"
                 echo "::notice title=Define RPM build matrix::Adding Enterprise Linux 9"
@@ -211,6 +211,12 @@ jobs:
           export OS_TITLE=$( cat /etc/os-release | grep '^PRETTY_NAME=' | sed -e 's/^PRETTY_NAME=//' -e 's/"//g' )
           export TZ="${{ inputs.timezone }}"
 
+          export DNF_ENABLE_REPO="--enablerepo=devel"
+          if [[ "${{ matrix.has_powertools }}" == true ]] ; then
+            DNF_ENABLE_REPO+=" --enablerepo=powertools"
+          fi
+
+          echo "DNF_ENABLE_REPO=${DNF_ENABLE_REPO}" >>"$GITHUB_ENV"
           echo "OS_TITLE=${OS_TITLE}" >>"$GITHUB_ENV"
           echo "PKG_NAME=${PKG_NAME}" >>"$GITHUB_ENV"
           echo "PKG_VERSION=${PKG_VERSION}" >>"$GITHUB_ENV"
@@ -296,32 +302,49 @@ jobs:
           cat "${REPO_FILE}"
           echo "<--"
 
-      - name: "Enabling PowerTools YUM repo"
+      - name: "Show all used YUM repos"
         shell: bash
         run: |
           echo -e "All current installed YUM repo definitions:"
-          dnf repolist --all
+          dnf ${DNF_ENABLE_REPO} repolist --all
 
-          pt_repofile=
-          for repofile in /etc/yum.repos.d/*.repo ; do
-              if grep -q '^\[powertools\]' "${repofile}" ; then
-                  echo -e "\nFound repo file for powertools YUM repository '${repofile}'."
-                  pt_repofile="${repofile}"
-                  break
-              fi
-          done
+          # devel_repofile=
+          # for repofile in /etc/yum.repos.d/*.repo ; do
+          #     if grep -q '^\[devel\]' "${repofile}" ; then
+          #         echo -e "\nFound repo file for devel YUM repository '${repofile}'."
+          #         devel_repofile="${repofile}"
+          #         break
+          #     fi
+          # done
 
-          if [[ -n "${pt_repofile}" ]] ; then
-              echo -e "\nEnabling powertools YUM repo ..."
-              sed -i -e 's/^enabled=.*/enabled=1/' "${pt_repofile}"
-              echo -e "\nModified content of ${pt_repofile}:"
-              cat "${pt_repofile}"
-              echo "<--"
-          fi
+          # if [[ -n "${devel_repofile}" ]] ; then
+          #     echo -e "\nEnabling devel YUM repo ..."
+          #     sed -i -e 's/^enabled=.*/enabled=1/' "${devel_repofile}"
+          #     echo -e "\nModified content of ${devel_repofile}:"
+          #     cat "${devel_repofile}"
+          #     echo "<--"
+          # fi
+
+          # pt_repofile=
+          # for repofile in /etc/yum.repos.d/*.repo ; do
+          #     if grep -q '^\[powertools\]' "${repofile}" ; then
+          #         echo -e "\nFound repo file for powertools YUM repository '${repofile}'."
+          #         pt_repofile="${repofile}"
+          #         break
+          #     fi
+          # done
+
+          # if [[ -n "${pt_repofile}" ]] ; then
+          #     echo -e "\nEnabling powertools YUM repo ..."
+          #     sed -i -e 's/^enabled=.*/enabled=1/' "${pt_repofile}"
+          #     echo -e "\nModified content of ${pt_repofile}:"
+          #     cat "${pt_repofile}"
+          #     echo "<--"
+          # fi
 
       - name: "Install EPEL repo"
         shell: bash
-        run: dnf --assumeyes install "${{ matrix.epel_package }}"
+        run: dnf ${DNF_ENABLE_REPO} --assumeyes install "${{ matrix.epel_package }}"
 
       - name: "Upgrade all packages"
         shell: bash
@@ -335,17 +358,17 @@ jobs:
           dnf makecache
 
           echo -e "\nUpgrading all packages"
-          dnf --assumeyes upgrade
+          dnf ${DNF_ENABLE_REPO} --assumeyes upgrade
 
       - name: 'Install TZdata'
         shell: bash
         run: |
           if rpm -qa | grep '^tzdata-' >/dev/null ; then
             echo -e "\nReinstalling tzdata ..."
-            dnf --assumeyes reinstall tzdata || true
+            dnf ${DNF_ENABLE_REPO} --assumeyes reinstall tzdata || true
           else
             echo -e "\nInstalling tzdata ..."
-            dnf --assumeyes install tzdata || true
+            dnf ${DNF_ENABLE_REPO} --assumeyes install tzdata || true
           fi
           echo -e "\nFile /usr/share/zoneinfo/zone.tab:"
           ls -l --color=always /usr/share/zoneinfo/zone.tab
@@ -354,15 +377,14 @@ jobs:
         shell: bash
         run: |
           echo "Installing Python ${{ matrix.py_version_nodot}} ..."
-          yum --assumeyes install ${PYTHON} \
-                                  ${PYTHON}-setuptools \
-                                  ${PYTHON}-pip \
-                                  ${PYTHON}-devel \
-                                  ${PYTHON}-babel \
-                                  ${PYTHON}-pytz \
-                                  ${PYTHON}-chardet \
-                                  ${PYTHON}-six \
-                                  ${PYTHON}-fb-logging
+
+          cmd="dnf ${DNF_ENABLE_REPO} --assumeyes install ${PYTHON}"
+          cmd+=" ${PYTHON}-setuptools ${PYTHON}-pip ${PYTHON}-devel ${PYTHON}-babel"
+          cmd+=" ${PYTHON}-pytz ${PYTHON}-chardet ${PYTHON}-six"
+
+          echo -e "\nCalling: ${cmd}"
+          eval ${cmd}
+
           echo -e "\nPython binaries:"
           ls -l --color=always /bin/python* /bin/pip* || true
 
@@ -376,7 +398,10 @@ jobs:
         shell: bash
         run: |
           echo "Installing build tools"
-          yum --assumeyes install gnupg2 rpm-build gettext help2man
+
+          cmd="dnf ${DNF_ENABLE_REPO} --assumeyes install gnupg2 rpm-build gettext help2man"
+          echo -e "\nCalling: ${cmd}"
+          eval ${cmd}
 
       - name: 'Create build environment'
         shell: bash
