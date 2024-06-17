@@ -402,7 +402,7 @@ jobs:
               fi
           done
 
-A         cmd="dnf ${DNF_ENABLE_REPO} --assumeyes install ${pkgs}"
+          cmd="dnf ${DNF_ENABLE_REPO} --assumeyes install ${pkgs}"
           echo -e "\nCalling: ${cmd}"
           eval ${cmd}
 
