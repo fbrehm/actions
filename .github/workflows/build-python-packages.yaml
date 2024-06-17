@@ -177,7 +177,7 @@ jobs:
       key_id: ${{ inputs.key_id }}
       retention_days: ${{ inputs.retention_days }}
       timezone: ${{ inputs.timezone }}
-      do_help2man: $(( inputs.do_help2man }}
+      do_help2man: ${{ inputs.do_help2man }}
     secrets:
       public_key: ${{ secrets.public_key }}
       private_key: ${{ secrets.private_key }}
@@ -207,7 +207,7 @@ jobs:
       own_repo_name: ${{ inputs.own_yum_repo_name }}
       own_repo_description: ${{ inputs.own_yum_repo_description }}
       own_repo_root_path: ${{ inputs.own_yum_repo_root_path }}
-      do_help2man: $(( inputs.do_help2man }}
+      do_help2man: ${{ inputs.do_help2man }}
     secrets:
       public_key: ${{ secrets.public_key }}
       private_key: ${{ secrets.private_key }}
