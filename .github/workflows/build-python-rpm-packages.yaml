@@ -73,6 +73,10 @@ on:
         description: 'The root path on the own YUM repository server.'
         type: string
         default: '/Yum'
+      do_help2man:
+        description: 'Generate man pages of scripts by calling help2man'
+        type: boolean
+        default: true
     secrets:
       public_key:
         description: 'The exported public GPG key"'
@@ -195,6 +199,7 @@ jobs:
       USED_LOCALE: 'en_US'
       USED_LC: 'en_US.utf8'
       ADDITIONAL_LOCALES: ${{ inputs.additional_locales }}
+      MAN_SECTION: 1
     container: ${{ matrix.container }}
 
     steps:
@@ -210,6 +215,8 @@ jobs:
           export PKG_BUILD_VERSION="${PKG_VERSION}-${PKG_RELEASE}"
           export OS_TITLE=$( cat /etc/os-release | grep '^PRETTY_NAME=' | sed -e 's/^PRETTY_NAME=//' -e 's/"//g' )
           export TZ="${{ inputs.timezone }}"
+          export RPM_SRC_DIR_BASE="${PYTHON}_${PKG_NAME}-${PKG_VERSION}"
+          export RPM_SRC_DIR="rpmdir/SOURCES/${RPM_SRC_DIR}"
 
           export DNF_ENABLE_REPO="--enablerepo=devel"
           if [[ "${{ matrix.has_powertools }}" == true ]] ; then
@@ -223,6 +230,8 @@ jobs:
           echo "PKG_RELEASE=${PKG_RELEASE}" >>"$GITHUB_ENV"
           echo "PKG_BUILD_VERSION=${PKG_BUILD_VERSION}" >>"$GITHUB_ENV"
           echo "TZ=${TZ}" >>"$GITHUB_ENV"
+          echo "RPM_SRC_DIR_BASE=${RPM_SRC_DIR_BASE}" >>"$GITHUB_ENV"
+          echo "RPM_SRC_DIR=${RPM_SRC_DIR}" >>"$GITHUB_ENV"
 
           echo "::notice::Building RPM packages on ${OS_TITLE}."
           echo -e "\nOS release:"
@@ -310,40 +319,6 @@ jobs:
           echo -e "All current installed YUM repo definitions:"
           dnf ${DNF_ENABLE_REPO} repolist --all
 
-          # devel_repofile=
-          # for repofile in /etc/yum.repos.d/*.repo ; do
-          #     if grep -q '^\[devel\]' "${repofile}" ; then
-          #         echo -e "\nFound repo file for devel YUM repository '${repofile}'."
-          #         devel_repofile="${repofile}"
-          #         break
-          #     fi
-          # done
-
-          # if [[ -n "${devel_repofile}" ]] ; then
-          #     echo -e "\nEnabling devel YUM repo ..."
-          #     sed -i -e 's/^enabled=.*/enabled=1/' "${devel_repofile}"
-          #     echo -e "\nModified content of ${devel_repofile}:"
-          #     cat "${devel_repofile}"
-          #     echo "<--"
-          # fi
-
-          # pt_repofile=
-          # for repofile in /etc/yum.repos.d/*.repo ; do
-          #     if grep -q '^\[powertools\]' "${repofile}" ; then
-          #         echo -e "\nFound repo file for powertools YUM repository '${repofile}'."
-          #         pt_repofile="${repofile}"
-          #         break
-          #     fi
-          # done
-
-          # if [[ -n "${pt_repofile}" ]] ; then
-          #     echo -e "\nEnabling powertools YUM repo ..."
-          #     sed -i -e 's/^enabled=.*/enabled=1/' "${pt_repofile}"
-          #     echo -e "\nModified content of ${pt_repofile}:"
-          #     cat "${pt_repofile}"
-          #     echo "<--"
-          # fi
-
       - name: "Install EPEL repo"
         shell: bash
         run: dnf ${DNF_ENABLE_REPO} --assumeyes install "${{ matrix.epel_package }}"
@@ -405,6 +380,30 @@ jobs:
           echo -e "\nCalling: ${cmd}"
           eval ${cmd}
 
+      - name: 'Creating man pages'
+        if: ${{ inputs.do_help2man }}
+        shell: bash
+        run: |
+          man_dir="usr/share/man/man${MAN_SECTION}"
+          echo -e "\nGenerating MAN pages in '${man_dir}'."
+
+          mkdir -p -v "${man_dir}"
+          for script in bin/* ; do
+              if [[ ! -x "${script}" ]] ; then
+                  continue
+              fi
+              script_base=$( basename "${script}" )
+              man_file_base="${script_base}.${MAN_SECTION}.gz"
+              man_file="${man_dir}/${man_file_base}"
+              echo "  * ${man_file_base}"
+              cmd="help2man --no-info --no-discard-stderr"
+              cmd+=" --version-string \"${PKG_VERSION}\""
+              cmd+=" --section ${MAN_SECTION}"
+              cmd+=" \"${script}\" | gzip -v9"
+              echo "      Executing: ${cmd} > \"${man_file}\""
+              eval ${cmd} > "${man_file}"
+          done
+
       - name: 'Create build environment'
         shell: bash
         run: |
@@ -421,8 +420,19 @@ jobs:
               echo " * ${o}"
           done
 
-          RPM_SRC_DIR="python${PY_VERSION_NODOT}_${PKG_NAME}-${PKG_VERSION}"
-          echo -e "Ensuring RPM source dir 'rpmdir/SOURCES/${RPM_SRC_DIR}' ..."
-          mkdir -pv "rpmdir/SOURCES/${RPM_SRC_DIR}"
+          echo -e "\nEnsuring RPM source dir '${RPM_SRC_DIR}' ..."
+          mkdir -pv "${RPM_SRC_DIR}"
+
+          echo -e "\nsources recursive into '${RPM_SRC_DIR}' ..."
+          tar cf - ${root_objects} | (cd "${RPM_SRC_DIR}" ; tar xf -)
+
+          tarball_base="${PKG_NAME}.${PKG_VERSION}.tar.gz"
+          tarball="rpmdir/SOURCES/${tarball_base}"
+          echo -e "\nCreating '${tarball}' ..."
+          cd rpmdir/SOURCES
+          tar cfz "${tarball_base}" "${RPM_SRC_DIR_BASE}"
+          echo -e "\nSource file:"
+          ls -lA --color=always *.tar.gz
+          cd "${workdir}"
 
 # vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list

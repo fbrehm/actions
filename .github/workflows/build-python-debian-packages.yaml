@@ -53,6 +53,10 @@ on:
         description: "The timezone used for this job."
         type: string
         default: 'Europe/Berlin'
+      do_help2man:
+        description: 'Generate man pages of scripts by calling help2man'
+        type: boolean
+        default: true
     secrets:
       public_key:
         description: 'The exported public GPG key"'
@@ -373,6 +377,7 @@ jobs:
       OS_RELEASE: ${{ matrix.os_release }}
       OS_TITLE: ${{ matrix.title }}
       VERSION_PREFIX: ${{ matrix.version_prefix }}
+      MAN_SECTION: 1
     steps:
       - name: "Checking out sources."
         uses: actions/checkout@v4
@@ -432,6 +437,30 @@ jobs:
           key_password: ${{ secrets.key_password }}
           password_file: ${{ inputs.password_file }}
           key_id: ${{ inputs.key_id }}
+
+      - name: 'Creating man pages'
+        if: ${{ inputs.do_help2man }}
+        shell: bash
+        run: |
+          echo -e "\nCreating MAN pages."
+
+          man_dir="usr/share/man/man${MAN_SECTION}"
+          mkdir -p -v "${man_dir}"
+          for script in bin/* ; do
+              if [[ ! -x "${script}" ]] ; then
+                  continue
+              fi
+              script_base=$( basename "${script}" )
+              man_file_base="${script_base}.${MAN_SECTION}.gz"
+              man_file="${man_dir}/${man_file_base}"
+              echo "  * ${man_file_base}"
+              cmd="help2man --no-info --no-discard-stderr"
+              cmd+=" --version-string \"${PKG_VERSION}\""
+              cmd+=" --section ${MAN_SECTION}"
+              cmd+=" \"${script}\" | gzip -v9"
+              echo "      Executing: ${cmd} > \"${man_file}\""
+              eval ${cmd} > "${man_file}"
+          done
 
       - name: 'Updating Changelog'
         shell: bash
