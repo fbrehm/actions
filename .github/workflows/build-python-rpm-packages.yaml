@@ -216,7 +216,7 @@ jobs:
           export OS_TITLE=$( cat /etc/os-release | grep '^PRETTY_NAME=' | sed -e 's/^PRETTY_NAME=//' -e 's/"//g' )
           export TZ="${{ inputs.timezone }}"
           export RPM_SRC_DIR_BASE="${PYTHON}_${PKG_NAME}-${PKG_VERSION}"
-          export RPM_SRC_DIR="rpmdir/SOURCES/${RPM_SRC_DIR}"
+          export RPM_SRC_DIR="rpmdir/SOURCES/${RPM_SRC_DIR_BASE}"
 
           export DNF_ENABLE_REPO="--enablerepo=devel"
           if [[ "${{ matrix.has_powertools }}" == true ]] ; then
@@ -423,16 +423,17 @@ jobs:
           echo -e "\nEnsuring RPM source dir '${RPM_SRC_DIR}' ..."
           mkdir -pv "${RPM_SRC_DIR}"
 
-          echo -e "\nsources recursive into '${RPM_SRC_DIR}' ..."
+          echo -e "\nCopy sources recursive into '${RPM_SRC_DIR}' ..."
           tar cf - ${root_objects} | (cd "${RPM_SRC_DIR}" ; tar xf -)
 
           tarball_base="${PKG_NAME}.${PKG_VERSION}.tar.gz"
           tarball="rpmdir/SOURCES/${tarball_base}"
-          echo -e "\nCreating '${tarball}' ..."
-          cd rpmdir/SOURCES
-          tar cfz "${tarball_base}" "${RPM_SRC_DIR_BASE}"
+          tarball_abs=$( readlink --canonicalize-missing "${tarball}" )
+          echo -e "\nCreating '${tarball_abs}' ..."
+          # cd rpmdir/SOURCES
+          tar --directory=rpmdir/SOURCES --create --verbose --gzip  --file "${tarball_abs}" "${RPM_SRC_DIR_BASE}"
           echo -e "\nSource file:"
-          ls -lA --color=always *.tar.gz
-          cd "${workdir}"
+          ls -lA --color=always rpmdir/SOURCES/*.tar.gz
+          # cd "${workdir}"
 
 # vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list
