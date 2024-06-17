@@ -276,21 +276,21 @@ jobs:
           URL+="${{ inputs.own_repo_server }}${{ inputs.own_repo_root_path }}/el-${{ matrix.el_version }}"
           DESC=$(  printf "${{ inputs.own_repo_description }}" "${{ matrix.el_version }}" )
 
-        echo -e "\nCreating '${REPO_FILE}' ..."
-        lines=$( cat <<-EOF
-        	[${{ inputs.own_repo_name }}]
-        	name=${DESC}
-        	baseurl=${URL}
-        	enabled=1
-        	gpgcheck=0
-        	repo_gpgcheck=0
-        	EOF
-        )
-        echo "${lines}" > "${REPO_FILE}"
+          echo -e "\nCreating '${REPO_FILE}' ..."
+          lines=$( cat <<-EOF
+          	[${{ inputs.own_repo_name }}]
+          	name=${DESC}
+          	baseurl=${URL}
+          	enabled=1
+          	gpgcheck=0
+          	repo_gpgcheck=0
+          	EOF
+          )
+          echo "${lines}" > "${REPO_FILE}"
 
-        echo -e "\nContent of '${REPO_FILE}':"
-        cat "${REPO_FILE}"
-        echo "<--"
+          echo -e "\nContent of '${REPO_FILE}':"
+          cat "${REPO_FILE}"
+          echo "<--"
 
       - name: "Enabling PowerTools YUM repo"
         shell: bash
