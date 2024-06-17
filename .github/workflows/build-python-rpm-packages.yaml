@@ -77,6 +77,10 @@ on:
         description: 'Generate man pages of scripts by calling help2man'
         type: boolean
         default: true
+      template_specfile:
+        description: "The template spec file used to generate the final spec file."
+        type: string
+        default: 'template.spec'
     secrets:
       public_key:
         description: 'The exported public GPG key"'
@@ -217,6 +221,7 @@ jobs:
           export TZ="${{ inputs.timezone }}"
           export RPM_SRC_DIR_BASE="${PYTHON}_${PKG_NAME}-${PKG_VERSION}"
           export RPM_SRC_DIR="rpmdir/SOURCES/${RPM_SRC_DIR_BASE}"
+          export SPECFILE="${PKG_NAME}.spec"
 
           export DNF_ENABLE_REPO="--enablerepo=devel"
           if [[ "${{ matrix.has_powertools }}" == true ]] ; then
@@ -232,6 +237,7 @@ jobs:
           echo "TZ=${TZ}" >>"$GITHUB_ENV"
           echo "RPM_SRC_DIR_BASE=${RPM_SRC_DIR_BASE}" >>"$GITHUB_ENV"
           echo "RPM_SRC_DIR=${RPM_SRC_DIR}" >>"$GITHUB_ENV"
+          echo "SPECFILE=${SPECFILE}" >>"$GITHUB_ENV"
 
           echo "::notice::Building RPM packages on ${OS_TITLE}."
           echo -e "\nOS release:"
@@ -430,10 +436,40 @@ jobs:
           tarball="rpmdir/SOURCES/${tarball_base}"
           tarball_abs=$( readlink --canonicalize-missing "${tarball}" )
           echo -e "\nCreating '${tarball_abs}' ..."
-          # cd rpmdir/SOURCES
           tar --directory=rpmdir/SOURCES --create --verbose --gzip  --file "${tarball_abs}" "${RPM_SRC_DIR_BASE}"
           echo -e "\nSource file:"
           ls -lA --color=always rpmdir/SOURCES/*.tar.gz
-          # cd "${workdir}"
+
+          echo -e "\nCreating spec file '${SPECFILE}' ..."
+          template="${{ inputs.template_specfile }}"
+          if [[ "${SPECFILE}" == "${{ inputs.template_specfile }}" ]] ; then
+              template="${{ inputs.template_specfile }}.bak0"
+              mv -v "${{ inputs.template_specfile }}" "${template}"
+          fi
+          cat "${template}" | sed -e "s/@@@Version@@@/${PKG_VERSION}/gi" \
+                                  -e "s/@@@Release@@@/${PKG_RELEASE}/gi" \
+                                  -e "s/@@@py_version_nodot@@@/${PY_VERSION_NODOT}/gi" \
+                                  -e "s/@@@py_version_dot@@@/${PY_VERSION_DOT}/gi" \
+                                  > "${SPECFILE}"
+
+          echo -e "Converting debian/changelog into RPM changelog format and appending it to ${SPECFILE}."
+          dch2speclog=dch2speclog
+          if [[ -x bin/dch2speclog ]] ; then
+              dch2speclog=bin/dch2speclog
+          fi
+          ${dch2speclog} debian/changelog >> "${SPECFILE}"
+
+          echo -e "\nGenerated '${SPECFILE}':"
+          cat "${SPECFILE}"
+          echo "<--"
+
+          rpm_macros="${HOME}/.rpmmacros"
+          echo -e "\nCreating '${rpm_macros}' ..."
+          echo "%__python3 /bin/python${{ matrix.py_version_dot }}" >"${rpm_macros}"
+          echo "%_signature gpg" >>"${rpm_macros}"
+          echo -e "\nGenerated '${rpm_macros}':"
+          cat "${rpm_macros}"
+          echo "<--"
+
 
 # vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list

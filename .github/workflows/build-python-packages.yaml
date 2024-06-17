@@ -105,6 +105,10 @@ on:
         description: 'Generate man pages of scripts by calling help2man'
         type: boolean
         default: true
+      template_specfile:
+        description: "The template spec file used to generate the final spec file for building RPM packages."
+        type: string
+        default: 'template.spec'
     secrets:
       pypi_token:
         description: "The token to use for transmitting the package to PyPi"
@@ -165,23 +169,23 @@ jobs:
     needs:
       - exec-python-linter
     with:
+      additional_debian_build_packages: ${{ inputs.additional_debian_build_packages }}
+      additional_locales: ${{ inputs.additional_locales }}
       debian_email: ${{ inputs.debian_email }}
       debian_fullname: ${{ inputs.debian_fullname }}
-      has_i18n: ${{ inputs.has_i18n }}
-      languages: ${{ inputs.languages }}
-      additional_locales: ${{ inputs.additional_locales }}
-      latest_debian_version: ${{ inputs.latest_debian_version }}
       debian_versions: ${{ inputs.debian_versions }}
-      additional_debian_build_packages: ${{ inputs.additional_debian_build_packages }}
-      password_file: ${{ inputs.password_file }}
+      do_help2man: ${{ inputs.do_help2man }}
+      has_i18n: ${{ inputs.has_i18n }}
       key_id: ${{ inputs.key_id }}
+      languages: ${{ inputs.languages }}
+      latest_debian_version: ${{ inputs.latest_debian_version }}
+      password_file: ${{ inputs.password_file }}
       retention_days: ${{ inputs.retention_days }}
       timezone: ${{ inputs.timezone }}
-      do_help2man: ${{ inputs.do_help2man }}
     secrets:
-      public_key: ${{ secrets.public_key }}
-      private_key: ${{ secrets.private_key }}
       key_password: ${{ secrets.key_password }}
+      private_key: ${{ secrets.private_key }}
+      public_key: ${{ secrets.public_key }}
 
   ###########################
   build-rpm-packages:
@@ -190,28 +194,29 @@ jobs:
     needs:
       - exec-python-linter
     with:
+      additional_locales: ${{ inputs.additional_locales }}
+      additional_rpm_build_packages: ${{ inputs.additional_rpm_build_packages }}
       debian_email: ${{ inputs.debian_email }}
       debian_fullname: ${{ inputs.debian_fullname }}
-      has_i18n: ${{ inputs.has_i18n }}
-      languages: ${{ inputs.languages }}
-      additional_locales: ${{ inputs.additional_locales }}
-      latest_debian_version: ${{ inputs.latest_debian_version }}
+      do_help2man: ${{ inputs.do_help2man }}
       el_versions: ${{ inputs.el_versions }}
-      additional_rpm_build_packages: ${{ inputs.additional_rpm_build_packages }}
-      password_file: ${{ inputs.password_file }}
+      has_i18n: ${{ inputs.has_i18n }}
       key_id: ${{ inputs.key_id }}
-      retention_days: ${{ inputs.retention_days }}
-      timezone: ${{ inputs.timezone }}
+      languages: ${{ inputs.languages }}
+      latest_debian_version: ${{ inputs.latest_debian_version }}
+      own_repo_description: ${{ inputs.own_yum_repo_description }}
+      own_repo_name: ${{ inputs.own_yum_repo_name }}
+      own_repo_root_path: ${{ inputs.own_yum_repo_root_path }}
       own_repo_server: ${{ inputs.own_yum_repo_server }}
       own_repo_server_use_https: ${{ inputs.own_yum_repo_server_use_https }}
-      own_repo_name: ${{ inputs.own_yum_repo_name }}
-      own_repo_description: ${{ inputs.own_yum_repo_description }}
-      own_repo_root_path: ${{ inputs.own_yum_repo_root_path }}
-      do_help2man: ${{ inputs.do_help2man }}
+      password_file: ${{ inputs.password_file }}
+      retention_days: ${{ inputs.retention_days }}
+      template_specfile: ${{ inputs.template_specfile }}
+      timezone: ${{ inputs.timezone }}
     secrets:
-      public_key: ${{ secrets.public_key }}
-      private_key: ${{ secrets.private_key }}
       key_password: ${{ secrets.key_password }}
+      private_key: ${{ secrets.private_key }}
+      public_key: ${{ secrets.public_key }}
 
 
 # vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list
