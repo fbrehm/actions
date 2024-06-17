@@ -246,15 +246,51 @@ jobs:
           echo -e "\nBash enviroment:"
           env | sort
 
+      # - name: "Adding own YUM repository"
+      #   uses: ./.github/actions/add-own-yum-repo
+      #   with:
+      #     use_https: ${{ inputs.own_repo_server_use_https }}
+      #     repo_server: ${{ inputs.own_repo_server }}
+      #     repo_name: ${{ inputs.own_repo_name }}
+      #     repo_description: ${{ inputs.own_repo_description }}
+      #     root_path: ${{ inputs.own_repo_root_path }}
+      #     el_major_version: ${{ matrix.el_version }}
+
       - name: "Adding own YUM repository"
-        uses: ./.github/actions/add-own-yum-repo
-        with:
-          use_https: ${{ inputs.own_repo_server_use_https }}
-          repo_server: ${{ inputs.own_repo_server }}
-          repo_name: ${{ inputs.own_repo_name }}
-          repo_description: ${{ inputs.own_repo_description }}
-          root_path: ${{ inputs.own_repo_root_path }}
-          el_major_version: ${{ matrix.el_version }}
+        shell: bash
+        env:
+          REPO_FILE: /etc/yum.repos.d/${{ inputs.own_repo_name }}.repo
+        run: |
+          echo -e "Root path for URL: '${{ inputs.own_repo_root_path }}'"
+
+          if [[ ! -d /etc/yum.repos.d/ ]] ; then
+              echo "::error title=add-own-yum-repo::Directory '/etc/yum.repos.d' not found or is not a directory."
+              exit 5
+          fi
+
+          URL="https://"
+          if [[ "${{ inputs.own_repo_server_use_https }}" == false ]] ; then
+              URL="http://"
+          fi
+
+          URL+="${{ inputs.own_repo_server }}${{ inputs.own_repo_root_path }}/el-${{ matrix.el_version }}"
+          DESC=$(  printf "${{ inputs.own_repo_description }}" "${{ matrix.el_version }}" )
+
+        echo -e "\nCreating '${REPO_FILE}' ..."
+        lines=$( cat <<-EOF
+        	[${{ inputs.own_repo_name }}]
+        	name=${DESC}
+        	baseurl=${URL}
+        	enabled=1
+        	gpgcheck=0
+        	repo_gpgcheck=0
+        	EOF
+        )
+        echo "${lines}" > "${REPO_FILE}"
+
+        echo -e "\nContent of '${REPO_FILE}':"
+        cat "${REPO_FILE}"
+        echo "<--"
 
       - name: "Enabling PowerTools YUM repo"
         shell: bash
