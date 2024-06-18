@@ -51,13 +51,17 @@ jobs:
       - name: 'Sorting all artifacts'
         shell: bash
         run: |
-          mv -vi artifacts/debian_bin_pkgs_*/* artifacts/
-          mv -vi artifacts/debian_sources/src artifacts/
+          mv -vi artifacts/python_pkgs artifacts/python
+
+          mkdir -pv artifacts/debian artifacts/el
+          mv -vi artifacts/debian_bin_pkgs_*/* artifacts/debian/
+          mv -vi artifacts/debian_sources/src artifacts/debian/
           rmdir -v artifacts/debian_bin_pkgs_* artifacts/debian_sources
+
           for el_version in 7 8 9 10 ; do
             if [[ -d artifacts/rpm_pkgs_el${el_version} ]]; then
-              mkdir -pv artifacts/el-${el_version}
-              mv -vi artifacts/rpm_pkgs_el${el_version}/*/*/*.rpm artifacts/rpm_pkgs_el${el_version}/*/*.rpm artifacts/el-${el_version}/
+              mkdir -pv artifacts/el/el-${el_version}
+              mv -vi artifacts/rpm_pkgs_el${el_version}/*/*/*.rpm artifacts/rpm_pkgs_el${el_version}/*/*.rpm artifacts/el/el-${el_version}/
             fi
           done
           rm -rv artifacts/rpm_pkgs_el*
@@ -84,38 +88,44 @@ jobs:
           cat ~/.ssh/known_hosts
           echo "<--"
 
-      - name: 'Deploy Python packages'
+      - name: "Finally deploy packaes."
         run: |
-
-          target="${{ secrets.repo_dir}}/python"
-          # echo -e "\nEnsuring target directory '${target}' ..."
-          # if ssh ${{ secrets.repo_user }}@${{ secrets.repo_server }} 'test -d ${target}' ; then
-          #     echo ' * already exists.'
-          # else
-          #     echo ' * Creating.'
-          #     ssh ${{ secrets.repo_user }}@${{ secrets.repo_server }} 'mkdir -p -v ${target}'
-          # fi
-
-          cmd="rsync -aHvz artifacts/python_pkgs/ ${{ secrets.repo_user }}@${{ secrets.repo_server }}:${{ secrets.repo_dir }}${target}/"
+          cmd="rsync -aHvz artifacts/ ${{ secrets.repo_user }}@${{ secrets.repo_server }}:${{ secrets.repo_dir }}${{ secrets.repo_dir}}/"
           echo -e "\nExecuting: ${cmd}"
           eval ${cmd}
 
-      - name: 'Deploy Debian packages with rsync'
-        run: |
+      # - name: 'Deploy Python packages'
+      #   run: |
 
-          cmd="rsync -aHvz artifacts/deb* artifacts/ubuntu* artifacts/src"
-          cmd+=" ${{ secrets.repo_user }}@${{ secrets.repo_server }}:${{ secrets.repo_dir}}/debian/"
+      #     target="${{ secrets.repo_dir}}/python"
+      #     # echo -e "\nEnsuring target directory '${target}' ..."
+      #     # if ssh ${{ secrets.repo_user }}@${{ secrets.repo_server }} 'test -d ${target}' ; then
+      #     #     echo ' * already exists.'
+      #     # else
+      #     #     echo ' * Creating.'
+      #     #     ssh ${{ secrets.repo_user }}@${{ secrets.repo_server }} 'mkdir -p -v ${target}'
+      #     # fi
 
-          echo -e "\nExecuting: ${cmd}"
-          eval ${cmd}
+      #     cmd="rsync -aHvz artifacts/python_pkgs/ ${{ secrets.repo_user }}@${{ secrets.repo_server }}:${{ secrets.repo_dir }}${target}/"
+      #     echo -e "\nExecuting: ${cmd}"
+      #     eval ${cmd}
 
-      - name: 'Deploy RPM packages with rsync'
-        run: |
+      # - name: 'Deploy Debian packages with rsync'
+      #   run: |
 
-          cmd="rsync -aHvz artifacts/el-* ${{ secrets.repo_user }}@${{ secrets.repo_server }}:${{ secrets.repo_dir }}/el/"
+      #     cmd="rsync -aHvz artifacts/deb* artifacts/ubuntu* artifacts/src"
+      #     cmd+=" ${{ secrets.repo_user }}@${{ secrets.repo_server }}:${{ secrets.repo_dir}}/debian/"
 
-          echo -e "\nExecuting: ${cmd}"
-          eval ${cmd}
+      #     echo -e "\nExecuting: ${cmd}"
+      #     eval ${cmd}
+
+      # - name: 'Deploy RPM packages with rsync'
+      #   run: |
+
+      #     cmd="rsync -aHvz artifacts/el-* ${{ secrets.repo_user }}@${{ secrets.repo_server }}:${{ secrets.repo_dir }}/el/"
+
+      #     echo -e "\nExecuting: ${cmd}"
+      #     eval ${cmd}
 
 
 # vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list
