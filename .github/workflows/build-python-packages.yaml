@@ -277,7 +277,7 @@ jobs:
       repo_user: ${{ secrets.repo_user }}
       ssh_private_key: ${{ secrets.ssh_private_key }}
       smtp_user: ${{ secrets.smtp_user }}
-      smtp_password: ${{ secrets.smtp_password: }}
+      smtp_password: ${{ secrets.smtp_password }}
 
 
 # vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list
