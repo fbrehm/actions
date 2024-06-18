@@ -237,6 +237,7 @@ jobs:
     needs:
       - build-debian-packages
       - build-rpm-packages
+      - deploy-to-pypi
     secrets:
       repo_server: ${{ secrets.repo_server }}
       repo_user: ${{ secrets.repo_user }}

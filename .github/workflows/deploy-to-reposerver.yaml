@@ -88,13 +88,13 @@ jobs:
         run: |
 
           target="${{ secrets.repo_dir}}/python"
-          echo -e "\nEnsuring target directory '${target}' ..."
-          if ssh ${{ secrets.repo_user }}@${{ secrets.repo_server }} 'test -d ${target}' ; then
-              echo ' * already exists.'
-          else
-              echo ' * Creating.'
-              ssh ${{ secrets.repo_user }}@${{ secrets.repo_server }} 'mkdir -p -v ${target}'
-          fi
+          # echo -e "\nEnsuring target directory '${target}' ..."
+          # if ssh ${{ secrets.repo_user }}@${{ secrets.repo_server }} 'test -d ${target}' ; then
+          #     echo ' * already exists.'
+          # else
+          #     echo ' * Creating.'
+          #     ssh ${{ secrets.repo_user }}@${{ secrets.repo_server }} 'mkdir -p -v ${target}'
+          # fi
 
           cmd="rsync -aHvz artifacts/python_pkgs/ ${{ secrets.repo_user }}@${{ secrets.repo_server }}:${{ secrets.repo_dir }}${target}/"
           echo -e "\nExecuting: ${cmd}"
