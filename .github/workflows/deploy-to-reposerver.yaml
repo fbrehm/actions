@@ -38,6 +38,12 @@ jobs:
         with:
           path: artifacts
 
+      - name: "Got current stuff."
+        shell: bash
+        run: |
+          echo -e "\nAll current artifacts:"
+          find artifacts -print0 | xargs --null --no-run-if-empty ls -l -d --color=always
+
       - name: 'Sorting all artifacts'
         shell: bash
         run: |
