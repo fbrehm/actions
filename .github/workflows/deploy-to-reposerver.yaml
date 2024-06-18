@@ -86,7 +86,7 @@ jobs:
       - name: 'Deploy RPM packages with rsync'
         run: |
 
-          cmd="rsync -aHvz artifacts/el-* ${{ secrets.repo_user }}@${{ secrets.repo_server }}:${W{ secrets.repo_dir}/el/"
+          cmd="rsync -aHvz artifacts/el-* ${{ secrets.repo_user }}@${{ secrets.repo_server }}:${{ secrets.repo_dir }}/el/"
 
           echo -e "\nExecuting: ${cmd}"
           eval ${cmd}
