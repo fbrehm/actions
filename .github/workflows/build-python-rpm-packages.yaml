@@ -468,8 +468,8 @@ jobs:
           fi
           cat "${template}" | sed -e "s/@@@Version@@@/${PKG_VERSION}/gi" \
                                   -e "s/@@@Release@@@/${PKG_RELEASE}/gi" \
-                                  -e "s/@@@py_version_nodot@@@/${PY_VERSION_NODOT}/gi" \
-                                  -e "s/@@@py_version_dot@@@/${PY_VERSION_DOT}/gi" \
+                                  -e "s/@@@py_version_nodot@@@/${{ matrix.py_version_nodot }}/gi" \
+                                  -e "s/@@@py_version_dot@@@/${{ matrix.py_version_dot }}/gi" \
                                   > "${SPECFILE}"
 
           echo -e "Converting debian/changelog into RPM changelog format and appending it to ${SPECFILE}."
