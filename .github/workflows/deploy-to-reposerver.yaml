@@ -11,6 +11,26 @@ on:
         description: 'The parent input directory on the receiving repository server.'
         type: string
         required: true
+      smtp_server_address:
+        description: 'The hostname or server address of the mailrelay.'
+        type: string
+        default: 'mail.uhu-banane.net'
+      smtp_server_port:
+        description: 'The TCP port of SMTP on the mailrelay.'
+        type: numeric
+        default: 587
+      smtp_protocol:
+        description: "The protocol to use to communicate with the SMTP server. Maybe 'smtp' or 'smtp+starttls'."
+        type: string
+        default: 'smtp+starttls'
+      smtp_sender_address:
+        description: "The (maybe full qualified) FROM address for the sended mail."
+        type: string
+        default: 'Frank Brehm <frank@brehm-online.com>'
+      smtp_recipient_addresses:
+        description: 'Recipients mail addresses (separated with comma)'
+        type: string
+        default: 'frank@brehm-online.com,frank.brehm@pixelpark.com'
     secrets:
       repo_server:
         description: 'The hostname name of the repository server.'
@@ -20,6 +40,12 @@ on:
         required: true
       ssh_private_key:
         description: 'The private SSH key of the user on the receiving repository server.'
+        required: true
+      smtp_user:
+        description: 'Authenticate as this user to SMTP server'
+        required: true
+      smtp_password:
+        description: 'Authenticate with this password to SMTP server'
         required: true
 
 ################################################################################
@@ -96,38 +122,30 @@ jobs:
           echo -e "\nExecuting: ${cmd}"
           eval ${cmd}
 
-      # - name: 'Deploy Python packages'
-      #   run: |
+  ###########################
+  notify_success:
+    runs-on: ubuntu-latest
+    name: Sending Success message
+    needs:
+      - 'deploy_to_repo'
+    steps:
+      - name: Sending message
+        uses: dawidd6/action-send-mail@v3
+        with:
+          # mail server settings
+          connection_url: "${{ inputs.smtp_protocol }}://${{ secrets.smtp_user }}:${{ secrets.smtp_password }}@${{ inputs.smtp_server_address }}:${{ inputs.smtp_server_port }}"
+          # email subject
+          subject: Github Workflow ${{ github.workflow }} of ${{ github.repository }} for ${{ github.ref_type }} ${{ github.ref_name }} was successful.
+          # email body as text
+          body: |
+            Github Actions Workflow ${{ github.workflow }} of ${{ github.repository }} for ${{ github.ref_type }} ${{ github.ref_name }} was successful.
+            Commiter: ${{ github.actor }}
 
-      #     target="${{ inputs.repo_dir}}/python"
-      #     # echo -e "\nEnsuring target directory '${target}' ..."
-      #     # if ssh ${{ secrets.repo_user }}@${{ secrets.repo_server }} 'test -d ${target}' ; then
-      #     #     echo ' * already exists.'
-      #     # else
-      #     #     echo ' * Creating.'
-      #     #     ssh ${{ secrets.repo_user }}@${{ secrets.repo_server }} 'mkdir -p -v ${target}'
-      #     # fi
-
-      #     cmd="rsync -aHvz artifacts/python_pkgs/ ${{ secrets.repo_user }}@${{ secrets.repo_server }}:${{ inputs.repo_dir }}${target}/"
-      #     echo -e "\nExecuting: ${cmd}"
-      #     eval ${cmd}
-
-      # - name: 'Deploy Debian packages with rsync'
-      #   run: |
-
-      #     cmd="rsync -aHvz artifacts/deb* artifacts/ubuntu* artifacts/src"
-      #     cmd+=" ${{ secrets.repo_user }}@${{ secrets.repo_server }}:${{ inputs.repo_dir}}/debian/"
-
-      #     echo -e "\nExecuting: ${cmd}"
-      #     eval ${cmd}
-
-      # - name: 'Deploy RPM packages with rsync'
-      #   run: |
-
-      #     cmd="rsync -aHvz artifacts/el-* ${{ secrets.repo_user }}@${{ secrets.repo_server }}:${{ inputs.repo_dir }}/el/"
-
-      #     echo -e "\nExecuting: ${cmd}"
-      #     eval ${cmd}
+            Cheers Frank
+          # comma-separated string, send email to
+          to: ${{ inputs.smtp_recipient_addresses }}
+          # from email name
+          from: ${{ inputs.smtp_sender_address }}
 
 
 # vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list
