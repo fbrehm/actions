@@ -382,7 +382,7 @@ jobs:
         run: |
           echo "Installing build tools"
 
-          cmd="dnf ${DNF_ENABLE_REPO} --assumeyes install gnupg2 rpm-build gettext help2man"
+          cmd="dnf ${DNF_ENABLE_REPO} --assumeyes install gnupg2 rpm-build rpm-sign gettext help2man"
           echo -e "\nCalling: ${cmd}"
           eval ${cmd}
 
