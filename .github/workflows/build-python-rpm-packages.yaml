@@ -406,6 +406,15 @@ jobs:
           echo -e "\nCalling: ${cmd}"
           eval ${cmd}
 
+      - name: 'Preparing GPG for signing files without entering a password'
+        uses: ./.github/actions/setup-gpg
+        with:
+          public_key: ${{ secrets.public_key }}
+          private_key: ${{ secrets.private_key }}
+          key_password: ${{ secrets.key_password }}
+          password_file: ${{ inputs.password_file }}
+          key_id: ${{ inputs.key_id }}
+
       - name: 'Creating man pages'
         if: ${{ inputs.do_help2man }}
         shell: bash
