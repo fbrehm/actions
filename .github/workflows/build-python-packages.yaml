@@ -109,6 +109,10 @@ on:
         description: "The template spec file used to generate the final spec file for building RPM packages."
         type: string
         default: 'template.spec'
+      repo_dir:
+        description: 'The parent input directory on the receiving repository server.'
+        type: string
+        required: true
     secrets:
       pypi_token:
         description: "The token to use for transmitting the package to PyPi"
@@ -126,9 +130,6 @@ on:
         required: true
       ssh_private_key:
         description: 'The private SSH key of the user on the receiving repository server.'
-        required: true
-      repo_dir:
-        description: 'The parent input directory on the receiving repository server.'
         required: true
 
 ################################################################################

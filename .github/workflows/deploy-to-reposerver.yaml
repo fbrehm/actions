@@ -6,6 +6,11 @@ name: "Deployment of all OS packages to the own repo server"
 # yamllint disable-line rule:truthy
 on:
   workflow_call:
+    inputs:
+      repo_dir:
+        description: 'The parent input directory on the receiving repository server.'
+        type: string
+        required: true
     secrets:
       repo_server:
         description: 'The hostname name of the repository server.'
@@ -15,9 +20,6 @@ on:
         required: true
       ssh_private_key:
         description: 'The private SSH key of the user on the receiving repository server.'
-        required: true
-      repo_dir:
-        description: 'The parent input directory on the receiving repository server.'
         required: true
 
 ################################################################################
@@ -90,14 +92,14 @@ jobs:
 
       - name: "Finally deploy packaes."
         run: |
-          cmd="rsync -aHvz artifacts/ ${{ secrets.repo_user }}@${{ secrets.repo_server }}:${{ secrets.repo_dir }}${{ secrets.repo_dir}}/"
+          cmd="rsync -aHvz artifacts/ ${{ secrets.repo_user }}@${{ secrets.repo_server }}:${{ inputs.repo_dir }}/"
           echo -e "\nExecuting: ${cmd}"
           eval ${cmd}
 
       # - name: 'Deploy Python packages'
       #   run: |
 
-      #     target="${{ secrets.repo_dir}}/python"
+      #     target="${{ inputs.repo_dir}}/python"
       #     # echo -e "\nEnsuring target directory '${target}' ..."
       #     # if ssh ${{ secrets.repo_user }}@${{ secrets.repo_server }} 'test -d ${target}' ; then
       #     #     echo ' * already exists.'
@@ -106,7 +108,7 @@ jobs:
       #     #     ssh ${{ secrets.repo_user }}@${{ secrets.repo_server }} 'mkdir -p -v ${target}'
       #     # fi
 
-      #     cmd="rsync -aHvz artifacts/python_pkgs/ ${{ secrets.repo_user }}@${{ secrets.repo_server }}:${{ secrets.repo_dir }}${target}/"
+      #     cmd="rsync -aHvz artifacts/python_pkgs/ ${{ secrets.repo_user }}@${{ secrets.repo_server }}:${{ inputs.repo_dir }}${target}/"
       #     echo -e "\nExecuting: ${cmd}"
       #     eval ${cmd}
 
@@ -114,7 +116,7 @@ jobs:
       #   run: |
 
       #     cmd="rsync -aHvz artifacts/deb* artifacts/ubuntu* artifacts/src"
-      #     cmd+=" ${{ secrets.repo_user }}@${{ secrets.repo_server }}:${{ secrets.repo_dir}}/debian/"
+      #     cmd+=" ${{ secrets.repo_user }}@${{ secrets.repo_server }}:${{ inputs.repo_dir}}/debian/"
 
       #     echo -e "\nExecuting: ${cmd}"
       #     eval ${cmd}
@@ -122,7 +124,7 @@ jobs:
       # - name: 'Deploy RPM packages with rsync'
       #   run: |
 
-      #     cmd="rsync -aHvz artifacts/el-* ${{ secrets.repo_user }}@${{ secrets.repo_server }}:${{ secrets.repo_dir }}/el/"
+      #     cmd="rsync -aHvz artifacts/el-* ${{ secrets.repo_user }}@${{ secrets.repo_server }}:${{ inputs.repo_dir }}/el/"
 
       #     echo -e "\nExecuting: ${cmd}"
       #     eval ${cmd}
