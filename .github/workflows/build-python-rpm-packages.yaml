@@ -406,29 +406,29 @@ jobs:
           echo -e "\nCalling: ${cmd}"
           eval ${cmd}
 
-      - name: 'Creating man pages'
-        if: ${{ inputs.do_help2man }}
-        shell: bash
-        run: |
-          man_dir="usr/share/man/man${MAN_SECTION}"
-          echo -e "\nGenerating MAN pages in '${man_dir}'."
+      # - name: 'Creating man pages'
+      #   if: ${{ inputs.do_help2man }}
+      #   shell: bash
+      #   run: |
+      #     man_dir="usr/share/man/man${MAN_SECTION}"
+      #     echo -e "\nGenerating MAN pages in '${man_dir}'."
 
-          mkdir -p -v "${man_dir}"
-          for script in bin/* ; do
-              if [[ ! -x "${script}" ]] ; then
-                  continue
-              fi
-              script_base=$( basename "${script}" )
-              man_file_base="${script_base}.${MAN_SECTION}.gz"
-              man_file="${man_dir}/${man_file_base}"
-              echo "  * ${man_file_base}"
-              cmd="help2man --no-info --no-discard-stderr"
-              cmd+=" --version-string \"${PKG_VERSION}\""
-              cmd+=" --section ${MAN_SECTION}"
-              cmd+=" \"${script}\" | gzip -v9"
-              echo "      Executing: ${cmd} > \"${man_file}\""
-              eval ${cmd} > "${man_file}"
-          done
+      #     mkdir -p -v "${man_dir}"
+      #     for script in bin/* ; do
+      #         if [[ ! -x "${script}" ]] ; then
+      #             continue
+      #         fi
+      #         script_base=$( basename "${script}" )
+      #         man_file_base="${script_base}.${MAN_SECTION}.gz"
+      #         man_file="${man_dir}/${man_file_base}"
+      #         echo "  * ${man_file_base}"
+      #         cmd="help2man --no-info --no-discard-stderr"
+      #         cmd+=" --version-string \"${PKG_VERSION}\""
+      #         cmd+=" --section ${MAN_SECTION}"
+      #         cmd+=" \"${script}\" | gzip -v9"
+      #         echo "      Executing: ${cmd} > \"${man_file}\""
+      #         eval ${cmd} > "${man_file}"
+      #     done
 
       - name: 'Create build environment'
         shell: bash
