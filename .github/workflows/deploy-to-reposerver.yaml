@@ -17,7 +17,8 @@ on:
         default: 'mail.uhu-banane.net'
       smtp_server_port:
         description: 'The TCP port of SMTP on the mailrelay.'
-        default: 587
+        type: string
+        default: '587'
       smtp_protocol:
         description: "The protocol to use to communicate with the SMTP server. Maybe 'smtp' or 'smtp+starttls'."
         type: string
