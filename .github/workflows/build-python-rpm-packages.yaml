@@ -492,13 +492,40 @@ jobs:
           cat "${SPECFILE}"
           echo "<--"
 
+          gpg_cmd="gpg --verbose --no-armor --batch --pinentry-mode loopback --no-secmem-warning"
+          gpg_cmd+=" --passphrase '${{ secrets.key_password }}'"
+          gpg_cmd+=" -u \"%{_gpg_name}\" -sbo %{__signature_filename} %{__plaintext_filename}"
+
           rpm_macros="${HOME}/.rpmmacros"
           echo -e "\nCreating '${rpm_macros}' ..."
-          echo "%__python3 /bin/python${{ matrix.py_version_dot }}" >"${rpm_macros}"
-          echo "%_signature gpg" >>"${rpm_macros}"
+          echo "%__python3 /bin/python${{ matrix.py_version_dot }}" > "${rpm_macros}"
+          echo "%_signature gpg"                                    >>"${rpm_macros}"
+          echo "%_gpg_name ${{ inputs.gpg_id }}"                    >>"${rpm_macros}"
+          echo "%__gpg_sign_cmd %{__gpg} ${gpg_cmd}"                >>"${rpm_macros}"
+
           echo -e "\nGenerated '${rpm_macros}':"
           cat "${rpm_macros}"
           echo "<--"
+
+      - name: "Tweaking /usr/lib/rpm/rpmpopt-* ..."
+        shell: bash
+        run: |
+          echo -e "\nTweaking /usr/lib/rpm/rpmpopt-* ..."
+
+          ls -l --color=always /usr/lib/rpm/rpmpopt-*
+
+          rpmoptfile=$( ls -1 /usr/lib/rpm/rpmpopt-* | head -n 1 )
+
+          rpmoptfile_base=$( basename "${rpmoptfile}" )
+          rpmoptfile_dir=$( dirname "${rpmoptfile}" )
+          rpmoptfile_bak="${rpmoptfile_dir}/.~${rpmoptfile_base}.bak"
+
+          cp -p -v -i "${rpmoptfile}" "${rpmoptfile_bak}"
+          sed -i -e 's/\(--addsign.*\) <.*/\1\x27 \\/' "${rpmoptfile}"
+
+          ls -l --color=always "${rpmoptfile}" "${rpmoptfile_bak}"
+
+          diff -u "${rpmoptfile_bak}" "${rpmoptfile}" || true
 
       - name: 'Finally creating RPMs'
         shell: bash
