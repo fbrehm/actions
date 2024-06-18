@@ -537,6 +537,20 @@ jobs:
           echo -e "\nExecuting ${cmd}"
           eval ${cmd}
 
+          if [[ -e "${{ inputs.password_file }}" ]] ; then
+              echo -e "\nSigning packages ..."
+              for f in $( find rpmdir -type f -iname "*.rpm" ) ; do
+                  echo "  * ${f} ..."
+                  echo "Checking existing signature:"
+                  rpm --checksig "${f}" || true
+                  rpmsign --addsign "${f}"
+                  echo "Checking new signature:"
+                  rpm --checksig "${f}" || true
+                  echo "Show signature:"
+                  rpm -q --qf '%{SIGPGP:pgpsig} %{SIGGPG:pgpsig}\n' -p "${f}" || true
+              done
+          fi
+
           echo -e "\nResults:"
           find rpmdir/*RPMS -type f -print0 | xargs --null --no-run-if-empty ls -l -d --color=always
 
