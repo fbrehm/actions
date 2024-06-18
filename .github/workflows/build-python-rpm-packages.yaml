@@ -492,16 +492,19 @@ jobs:
           cat "${SPECFILE}"
           echo "<--"
 
-          gpg_cmd="gpg --verbose --no-armor --batch --pinentry-mode loopback --no-secmem-warning"
-          gpg_cmd+=" --passphrase '${{ secrets.key_password }}'"
-          gpg_cmd+=" -u \"%{_gpg_name}\" -sbo %{__signature_filename} %{__plaintext_filename}"
-
           rpm_macros="${HOME}/.rpmmacros"
           echo -e "\nCreating '${rpm_macros}' ..."
           echo "%__python3 /bin/python${{ matrix.py_version_dot }}" > "${rpm_macros}"
           echo "%_signature gpg"                                    >>"${rpm_macros}"
-          echo "%_gpg_name ${{ inputs.gpg_id }}"                    >>"${rpm_macros}"
-          echo "%__gpg_sign_cmd %{__gpg} ${gpg_cmd}"                >>"${rpm_macros}"
+
+          if [[ -e "${{ inputs.password_file }}" ]] ; then
+              gpg_cmd="gpg --verbose --no-armor --batch --pinentry-mode loopback --no-secmem-warning"
+              gpg_cmd+=" --passphrase '${{ secrets.key_password }}'"
+              gpg_cmd+=" -u \"%{_gpg_name}\" -sbo %{__signature_filename} %{__plaintext_filename}"
+
+              echo "%_gpg_name ${{ inputs.gpg_id }}"                    >>"${rpm_macros}"
+              echo "%__gpg_sign_cmd %{__gpg} ${gpg_cmd}"                >>"${rpm_macros}"
+          fi
 
           echo -e "\nGenerated '${rpm_macros}':"
           cat "${rpm_macros}"
