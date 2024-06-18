@@ -118,6 +118,18 @@ on:
         description: 'The exported private GPG key"'
       key_password:
         description: 'The password of the imported private GPG key.'
+      repo_server:
+        description: 'The hostname name of the repository server.'
+        required: true
+      repo_user:
+        description: 'The name of the user on the receiving repository server.'
+        required: true
+      ssh_private_key:
+        description: 'The private SSH key of the user on the receiving repository server.'
+        required: true
+      repo_dir:
+        description: 'The parent input directory on the receiving repository server.'
+        required: true
 
 ################################################################################
 env:
@@ -217,6 +229,19 @@ jobs:
       key_password: ${{ secrets.key_password }}
       private_key: ${{ secrets.private_key }}
       public_key: ${{ secrets.public_key }}
+
+  ###########################
+  deploy-to-repos:
+    name: "Deployment of all OS packages to the own repo server"
+    uses: ./.github/workflows/deploy-to-reposerver.yaml
+    needs:
+      - build-debian-packages
+      - build-rpm-packages
+    secrets:
+      repo_server: ${{ secrets.repo_server }}
+      repo_user: ${{ secrets.repo_user }}
+      ssh_private_key: ${{ secrets.ssh_private_key }}
+      repo_dir: ${{ secrets.repo_dir }}
 
 
 # vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list
