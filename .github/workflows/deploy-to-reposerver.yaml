@@ -21,6 +21,11 @@ on:
         required: true
 
 ################################################################################
+defaults:
+  run:
+    shell: bash
+
+################################################################################
 jobs:
 
   ###########################
@@ -39,7 +44,6 @@ jobs:
           path: artifacts
 
       - name: "Got current stuff."
-        shell: bash
         run: |
           echo -e "\nAll current artifacts:"
           find artifacts -print0 | xargs --null --no-run-if-empty ls -l -d --color=always
@@ -79,6 +83,22 @@ jobs:
           echo -e "\nContent of ~/.ssh/known_hosts:"
           cat ~/.ssh/known_hosts
           echo "<--"
+
+      - name: 'Deploy Python packages'
+        run: |
+
+          target="${{ secrets.repo_dir}}/python"
+          echo -e "\nEnsuring target directory '${target}' ..."
+          if ssh ${{ secrets.repo_user }}@${{ secrets.repo_server }} 'test -d ${target}' ; then
+              echo ' * already exists.'
+          else
+              echo ' * Creating.'
+              ssh ${{ secrets.repo_user }}@${{ secrets.repo_server }} 'mkdir -p -v ${target}'
+          fi
+
+          cmd="rsync -aHvz artifacts/python_pkgs/ ${{ secrets.repo_user }}@${{ secrets.repo_server }}:${{ secrets.repo_dir }}${target}/"
+          echo -e "\nExecuting: ${cmd}"
+          eval ${cmd}
 
       - name: 'Deploy Debian packages with rsync'
         run: |
