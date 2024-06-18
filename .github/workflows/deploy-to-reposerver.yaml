@@ -133,8 +133,11 @@ jobs:
         uses: dawidd6/action-send-mail@v3
         with:
           # mail server settings
-          connection_url: "${{ inputs.smtp_protocol }}://${{ secrets.smtp_user }}:${{ secrets.smtp_password }}@${{ inputs.smtp_server_address }}:${{ inputs.smtp_server_port }}"
+          # connection_url: "${{ inputs.smtp_protocol }}://${{ secrets.smtp_user }}:${{ secrets.smtp_password }}@${{ inputs.smtp_server_address }}:${{ inputs.smtp_server_port }}"
+          server_address: ${{ inputs.smtp_server_address }}
           server_port: ${{ inputs.smtp_server_port }}
+          username: ${{ secrets.smtp_user }}
+          password: ${{ secrets.smtp_password }}
           # email subject
           subject: Github Workflow ${{ github.workflow }} of ${{ github.repository }} for ${{ github.ref_type }} ${{ github.ref_name }} was successful.
           # email body as text
