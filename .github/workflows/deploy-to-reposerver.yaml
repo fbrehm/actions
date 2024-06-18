@@ -55,7 +55,7 @@ jobs:
           echo -e "\nAll sorted artifacts:"
           find artifacts -print0 | xargs --null --no-run-if-empty ls -l -d --color=always
 
-     - name: 'Install private SSH Key'
+      - name: 'Install private SSH Key'
         uses: shimataro/ssh-key-action@v2
         with:
           key: ${{ secrets.ssh_private_key }}
