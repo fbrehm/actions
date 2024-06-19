@@ -60,7 +60,7 @@ jobs:
   deploy_to_repo:
     runs-on: ubuntu-latest
     name: "Deployment of all Packages to Frank Brehms repo server"
-    if: ${{ github.ref_type == 'tag' || github.ref_name == 'dev/workflow' }}
+    if: ${{ github.ref_type == 'tag' }}
     steps:
 
       - name: "Checking out sources."
