@@ -1,0 +1,567 @@
+---
+
+name: "Building Debian packages of a Python source package."
+
+################################################################################
+# yamllint disable-line rule:truthy
+on:
+  workflow_call:
+    inputs:
+      debian_email:
+        description: 'The mail address of the user, which will be used to update debian/chagelog.'
+        type: string
+        default: 'frank@brehm-online.com'
+      debian_fullname:
+        description: 'A human readable name of the user, which will be used to update debian/chagelog.'
+        type: string
+        default: 'Frank Brehm'
+      has_i18n:
+        description: 'Does the package support localisation and internationalisation?'
+        type: boolean
+        default: true
+      languages:
+        description: 'A list of languages, which will be supported, if has_i18n is true.'
+        type: string
+        default: '["de_DE.UTF-8", "en_US.UTF-8"]'
+      additional_locales:
+        description: 'A whitespace separated list of additional locales (except en_US.UTF-8)'
+        type: string
+        default: 'de_DE.UTF-8'
+      latest_debian_version:
+        description: 'The short name of the latest stable Debian version.'
+        type: string
+        default: 'bookworm'
+      el_versions:
+        description: 'Whitespace separated list of Enterprise Linux versions to build the package for.'
+        type: string
+        default: 'el-8 el-9'
+      additional_rpm_build_packages:
+        description: "A withespace separated list of packages additional to the base build packages"
+        type: string
+      password_file:
+        description: 'The file containing the password of the private GPG key.'
+        type: string
+        default: '.private/uhu.txt'
+      key_id:
+        description: 'The ID of the used private GPG key.'
+        type: string
+      retention_days:
+        description: "The days for keeping the generated packages at GitHub."
+        type: number
+        default: 8
+      timezone:
+        description: "The timezone used for this job."
+        type: string
+        default: 'Europe/Berlin'
+      own_repo_server:
+        description: 'The FQDN of the own YUM repository server.'
+        type: string
+        default: 'repo.uhu-banane.de'
+      own_repo_server_use_https:
+        description: 'Use HTTPS instead of HTTP as the URL schema for the own repo server.'
+        type: boolean
+        default: false
+      own_repo_name:
+        description: 'The name of the own Yum repository'
+        type: string
+        default: 'frank-brehm'
+      own_repo_description:
+        description: 'The verbose description of the own Yum repository'
+        type: string
+        default: 'Frank Brehms Yum repository for Enterprise Linux %s'
+      own_repo_root_path:
+        description: 'The root path on the own YUM repository server.'
+        type: string
+        default: '/Yum'
+      do_help2man:
+        description: 'Generate man pages of scripts by calling help2man'
+        type: boolean
+        default: true
+      template_specfile:
+        description: "The template spec file used to generate the final spec file."
+        type: string
+        default: 'template.spec'
+    secrets:
+      public_key:
+        description: 'The exported public GPG key"'
+      private_key:
+        description: 'The exported private GPG key"'
+      key_password:
+        description: 'The password of the imported private GPG key.'
+
+################################################################################
+env:
+  DEBFULLNAME: ${{ inputs.debian_fullname }}
+  DEBEMAIL: ${{ inputs.debian_email }}
+  GIT_REF: ${{ github.ref }}
+  GIT_REFNAME: ${{ github.ref_name }}
+  GIT_REFTYPE: ${{ github.ref_type }}
+
+################################################################################
+jobs:
+
+  ###########################
+  define-rpm-build-matrix:
+    name: "Defining the Matrix for building RPM packages"
+    runs-on: ubuntu-latest
+    if: ${{ github.ref_name == 'main' || github.ref_name == 'master' || startsWith(github.ref_name, 'test') || github.ref_name == 'dev/workflow' || startsWith(github.ref, 'refs/tags/')  }}
+    container: debian:${{ inputs.latest_debian_version }}
+    env:
+      EL_VERSIONS: ${{ inputs.el_versions }}
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: "Update package lists"
+        id: apt-update
+        shell: bash
+        run: |
+          echo "Update all package lists."
+          apt update --yes
+
+      - name: "Install JQ"
+        shell: bash
+        run: |
+          apt install --yes jq
+          echo -e "\nVersion of JQ: $( jq --version )"
+
+      - name: "Defining the build-matrix"
+        id: set-matrix
+        shell: bash
+        run: |
+          if [[ -z "${EL_VERSIONS}" ]] ; then
+            echo "::error::No Enterprise Linux versions given for building packages."
+            exit 5
+          fi
+          matrix_json='{"include": ['
+          first_distro='y'
+
+          for el_version in ${EL_VERSIONS}; do
+            el_version_lc=$( echo "${el_version}" | tr '[:upper:]' '[:lower:]' )
+            echo "::debug::Performing Enterprise Linux version '${el_version}' -> '${el_version_lc}'"
+            case "${el_version_lc}" in
+              el-8|el8)
+                if [[ "${first_distro}" != 'y' ]] ; then
+                  matrix_json+=", "
+                fi
+                matrix_json+="{"
+                matrix_json+="\"title\": \"Enterprise Linux 8\", "
+                matrix_json+="\"el_version\": \"8\", "
+                matrix_json+="\"py_minor_version\": \"8\", "
+                matrix_json+="\"py_version_dot\": \"3.8\", "
+                matrix_json+="\"py_version_nodot\": \"38\", "
+                matrix_json+="\"container\": \"rockylinux:8\", "
+                matrix_json+="\"has_powertools\": \"true\", "
+                matrix_json+="\"epel_package\": \"epel-release\""
+                matrix_json+="}"
+                echo "::notice title=Define RPM build matrix::Adding Enterprise Linux 8"
+                ;;
+              el-9|el9)
+                if [[ "${first_distro}" != 'y' ]] ; then
+                  matrix_json+=", "
+                fi
+                matrix_json+="{"
+                matrix_json+="\"title\": \"Enterprise Linux 9\", "
+                matrix_json+="\"el_version\": \"9\", "
+                matrix_json+="\"py_minor_version\": \"9\", "
+                matrix_json+="\"py_version_dot\": \"3\", "
+                matrix_json+="\"py_version_nodot\": \"3\", "
+                matrix_json+="\"container\": \"rockylinux:9\", "
+                matrix_json+="\"has_powertools\": \"false\", "
+                matrix_json+="\"epel_package\": \"epel-release\""
+                matrix_json+="}"
+                echo "::notice title=Define RPM build matrix::Adding Enterprise Linux 9"
+                ;;
+              *)
+                echo "::error title=Define RPM build matrix::Unknown Enterprise Linux version '${el_version}' given." >&2
+                exit 6
+                ;;
+            esac
+            first_distro='n'
+          done
+
+          matrix_json+="]}"
+
+          echo -e "\nGenerated JSON:"
+          echo "${matrix_json}" | jq -C .
+
+          echo "matrix=${matrix_json}" >> ${GITHUB_OUTPUT}
+          echo "::debug::Using Matrix: $( cat ${GITHUB_OUTPUT} )"
+
+  ###########################
+  build-rpm:
+    runs-on: ubuntu-latest
+    name: Build RPM packages for EL ${{ matrix.el_version }}
+    if: ${{ github.ref_name == 'main' || github.ref_name == 'master' || startsWith(github.ref_name, 'test') || github.ref_name == 'dev/workflow' || startsWith(github.ref, 'refs/tags/')  }}
+    needs:
+      - define-rpm-build-matrix
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.define-rpm-build-matrix.outputs.matrix) }}
+    env:
+      PYTHON: "python${{ matrix.py_version_nodot}}"
+      USED_CHARSET: 'utf8'
+      USED_LOCALE: 'en_US'
+      USED_LC: 'en_US.utf8'
+      ADDITIONAL_LOCALES: ${{ inputs.additional_locales }}
+      MAN_SECTION: 1
+    container: ${{ matrix.container }}
+
+    steps:
+      - name: "Checking out sources."
+        uses: actions/checkout@v4
+
+      - name: "Set and show Environment"
+        shell: bash
+        run: |
+          export PKG_NAME=$( head -n 1 debian/changelog | awk '{print $1}' )
+          export PKG_VERSION=$( head -n 1 debian/changelog | sed -e "s/^[^(]*(//" -e "s/).*//" )
+          export PKG_RELEASE=$( ./get-rpm-release )
+          export PKG_BUILD_VERSION="${PKG_VERSION}-${PKG_RELEASE}"
+          export OS_TITLE=$( cat /etc/os-release | grep '^PRETTY_NAME=' | sed -e 's/^PRETTY_NAME=//' -e 's/"//g' )
+          export TZ="${{ inputs.timezone }}"
+          export RPM_SRC_DIR_BASE="${PYTHON}_${PKG_NAME}-${PKG_VERSION}"
+          export RPM_SRC_DIR="rpmdir/SOURCES/${RPM_SRC_DIR_BASE}"
+          export SPECFILE="${PKG_NAME}.spec"
+
+          export DNF_ENABLE_REPO="--enablerepo=devel"
+          if [[ "${{ matrix.has_powertools }}" == true ]] ; then
+            DNF_ENABLE_REPO+=" --enablerepo=powertools"
+          fi
+
+          echo "DNF_ENABLE_REPO=${DNF_ENABLE_REPO}" >>"$GITHUB_ENV"
+          echo "OS_TITLE=${OS_TITLE}" >>"$GITHUB_ENV"
+          echo "PKG_NAME=${PKG_NAME}" >>"$GITHUB_ENV"
+          echo "PKG_VERSION=${PKG_VERSION}" >>"$GITHUB_ENV"
+          echo "PKG_RELEASE=${PKG_RELEASE}" >>"$GITHUB_ENV"
+          echo "PKG_BUILD_VERSION=${PKG_BUILD_VERSION}" >>"$GITHUB_ENV"
+          echo "TZ=${TZ}" >>"$GITHUB_ENV"
+          echo "RPM_SRC_DIR_BASE=${RPM_SRC_DIR_BASE}" >>"$GITHUB_ENV"
+          echo "RPM_SRC_DIR=${RPM_SRC_DIR}" >>"$GITHUB_ENV"
+          echo "SPECFILE=${SPECFILE}" >>"$GITHUB_ENV"
+
+          echo "::notice::Building RPM packages on ${OS_TITLE}."
+          echo -e "\nOS release:"
+          cat /etc/os-release
+          echo "<--"
+
+          echo -e "\nAll locales:"
+          locale -a
+          echo -e "\nInstalling locales ..."
+          langpacks='langpacks-en'
+          echo " * en"
+          if [[ -n "${ADDITIONAL_LOCALES}" ]] ; then
+              for my_lc in "${ADDITIONAL_LOCALES}" ; do
+                  base_lang=$( echo "${my_lc}" | sed -e 's/\..*//'  -e 's/_.*//' )
+                  echo " * ${base_lang}"
+                  langpack="langpacks-${base_lang}"
+                  langpacks+=" ${langpack}"
+              done
+          fi
+          echo -e "\nInstalling language packs ${langpacks}"
+          cmd="dnf ${DNF_ENABLE_REPO} --assumeyes install glibc-all-langpacks ${langpacks}"
+          echo -e "\nCalling: ${cmd}"
+          eval ${cmd}
+          echo -e "\nAll locales:"
+          locale -a
+          echo -e "\nCurrent locales:"
+          locale
+          export LC_ALL="${USED_LC}"
+          echo "LC_ALL=${LC_ALL}" >>"$GITHUB_ENV"
+          echo -e "\nCurrent locales again:"
+          locale
+
+          echo -e "\nBash enviroment:"
+          env | sort
+
+      # - name: "Adding own YUM repository"
+      #   uses: ./.github/actions/add-own-yum-repo
+      #   with:
+      #     use_https: ${{ inputs.own_repo_server_use_https }}
+      #     repo_server: ${{ inputs.own_repo_server }}
+      #     repo_name: ${{ inputs.own_repo_name }}
+      #     repo_description: ${{ inputs.own_repo_description }}
+      #     root_path: ${{ inputs.own_repo_root_path }}
+      #     el_major_version: ${{ matrix.el_version }}
+
+      - name: "Adding own YUM repository"
+        shell: bash
+        env:
+          REPO_FILE: /etc/yum.repos.d/${{ inputs.own_repo_name }}.repo
+        run: |
+          echo -e "Root path for URL: '${{ inputs.own_repo_root_path }}'"
+
+          if [[ ! -d /etc/yum.repos.d/ ]] ; then
+              echo "::error title=add-own-yum-repo::Directory '/etc/yum.repos.d' not found or is not a directory."
+              exit 5
+          fi
+
+          URL="https://"
+          if [[ "${{ inputs.own_repo_server_use_https }}" == false ]] ; then
+              URL="http://"
+          fi
+
+          URL+="${{ inputs.own_repo_server }}${{ inputs.own_repo_root_path }}/el-${{ matrix.el_version }}"
+          DESC=$(  printf "${{ inputs.own_repo_description }}" "${{ matrix.el_version }}" )
+
+          echo -e "\nCreating '${REPO_FILE}' ..."
+          lines=$( cat <<-EOF
+          	[${{ inputs.own_repo_name }}]
+          	name=${DESC}
+          	baseurl=${URL}
+          	enabled=1
+          	gpgcheck=0
+          	repo_gpgcheck=0
+          	EOF
+          )
+          echo "${lines}" > "${REPO_FILE}"
+
+          echo -e "\nContent of '${REPO_FILE}':"
+          cat "${REPO_FILE}"
+          echo "<--"
+
+      - name: "Show all used YUM repos"
+        shell: bash
+        run: |
+          echo -e "All current installed YUM repo definitions:"
+          dnf ${DNF_ENABLE_REPO} repolist --all
+
+      - name: "Install EPEL repo"
+        shell: bash
+        run: dnf ${DNF_ENABLE_REPO} --assumeyes install "${{ matrix.epel_package }}"
+
+      - name: "Upgrade all packages"
+        shell: bash
+        env:
+          LC_ALL: "en_US.utf8"
+        run: |
+          echo -e "\nCleaning dnf ..."
+          dnf clean all
+
+          echo -e "\ndnf makecache ..."
+          dnf makecache
+
+          echo -e "\nUpgrading all packages"
+          dnf ${DNF_ENABLE_REPO} --assumeyes upgrade
+
+      - name: 'Install TZdata'
+        shell: bash
+        run: |
+          if rpm -qa | grep '^tzdata-' >/dev/null ; then
+            echo -e "\nReinstalling tzdata ..."
+            dnf ${DNF_ENABLE_REPO} --assumeyes reinstall tzdata || true
+          else
+            echo -e "\nInstalling tzdata ..."
+            dnf ${DNF_ENABLE_REPO} --assumeyes install tzdata || true
+          fi
+          echo -e "\nFile /usr/share/zoneinfo/zone.tab:"
+          ls -l --color=always /usr/share/zoneinfo/zone.tab
+
+      - name: 'Install Python 3'
+        shell: bash
+        run: |
+          echo "Installing Python ${{ matrix.py_version_nodot}} ..."
+
+          cmd="dnf ${DNF_ENABLE_REPO} --assumeyes install ${PYTHON}"
+          cmd+=" ${PYTHON}-setuptools ${PYTHON}-pip ${PYTHON}-devel ${PYTHON}-babel"
+          cmd+=" ${PYTHON}-pytz ${PYTHON}-chardet ${PYTHON}-six"
+
+          echo -e "\nCalling: ${cmd}"
+          eval ${cmd}
+
+          echo -e "\nPython binaries:"
+          ls -l --color=always /bin/python* /bin/pip* || true
+
+          echo -e "\nInstalling Python-Debian with pip3 ..."
+          pip3 install python-debian packaging
+
+          echo -e "\nPip3 list:"
+          pip3 list --format columns
+
+      - name: 'Installing build tools'
+        shell: bash
+        run: |
+          echo "Installing build tools"
+
+          cmd="dnf ${DNF_ENABLE_REPO} --assumeyes install gnupg2 rpm-build rpm-sign gettext help2man"
+          echo -e "\nCalling: ${cmd}"
+          eval ${cmd}
+
+      - name: 'Installing additional packages.'
+        if: ${{ inputs.additional_rpm_build_packages }}
+        shell: bash
+        run: |
+          echo -e "\nInstalling additional packages ..."
+
+          pkgs=''
+          for pkg_orig in ${{ inputs.additional_rpm_build_packages }} ; do
+              pkg=$( echo "${pkg_orig}" | sed -e "s/^python3X/python${{ matrix.py_version_nodot}}/" )
+              if [[ -z "{pkgs}" ]] ; then
+                  pkgs="${pkg}"
+              else
+                  pkgs+=" ${pkg}"
+              fi
+          done
+
+          cmd="dnf ${DNF_ENABLE_REPO} --assumeyes install ${pkgs}"
+          echo -e "\nCalling: ${cmd}"
+          eval ${cmd}
+
+      - name: 'Preparing GPG for signing files without entering a password'
+        uses: fbrehm/github-setup-gpg@main
+        with:
+          public_key: ${{ secrets.public_key }}
+          private_key: ${{ secrets.private_key }}
+          key_password: ${{ secrets.key_password }}
+          password_file: ${{ inputs.password_file }}
+          key_id: ${{ inputs.key_id }}
+
+      - name: 'Creating man pages'
+        if: ${{ inputs.do_help2man }}
+        shell: bash
+        run: |
+          man_dir="usr/share/man/man${MAN_SECTION}"
+          echo -e "\nGenerating MAN pages in '${man_dir}'."
+
+          mkdir -p -v "${man_dir}"
+          for script in bin/* ; do
+              if [[ ! -x "${script}" ]] ; then
+                  continue
+              fi
+              script_base=$( basename "${script}" )
+              man_file_base="${script_base}.${MAN_SECTION}.gz"
+              man_file="${man_dir}/${man_file_base}"
+              echo "  * ${man_file_base}"
+              cmd="help2man --no-info --no-discard-stderr"
+              cmd+=" --version-string \"${PKG_VERSION}\""
+              cmd+=" --section ${MAN_SECTION}"
+              cmd+=" \"${script}\" | gzip -v9"
+              echo "      Executing: ${cmd} > \"${man_file}\""
+              eval ${cmd} > "${man_file}"
+          done
+
+      - name: 'Create build environment'
+        shell: bash
+        run: |
+          echo -e "\nVersion to build: ${PKG_BUILD_VERSION}"
+
+          echo -e "\nCreating RPMDIR ..."
+          mkdir -pv rpmdir
+          mkdir -pv rpmdir/SOURCES
+
+          workdir=$(pwd)
+          root_objects=$( ls -A1 | egrep -vw ".git|rpmdir" )
+          echo -e "\nRoot objects:"
+          for o in ${root_objects} ; do
+              echo " * ${o}"
+          done
+
+          echo -e "\nEnsuring RPM source dir '${RPM_SRC_DIR}' ..."
+          mkdir -pv "${RPM_SRC_DIR}"
+
+          echo -e "\nCopy sources recursive into '${RPM_SRC_DIR}' ..."
+          tar cf - ${root_objects} | (cd "${RPM_SRC_DIR}" ; tar xf -)
+
+          tarball_base="${PKG_NAME}.${PKG_VERSION}.tar.gz"
+          tarball="rpmdir/SOURCES/${tarball_base}"
+          tarball_abs=$( readlink --canonicalize-missing "${tarball}" )
+          echo -e "\nCreating '${tarball_abs}' ..."
+          tar --directory=rpmdir/SOURCES --create --verbose --gzip  --file "${tarball_abs}" "${RPM_SRC_DIR_BASE}"
+          echo -e "\nSource file:"
+          ls -lA --color=always rpmdir/SOURCES/*.tar.gz
+
+          echo -e "\nCreating spec file '${SPECFILE}' ..."
+          template="${{ inputs.template_specfile }}"
+          if [[ "${SPECFILE}" == "${{ inputs.template_specfile }}" ]] ; then
+              template="${{ inputs.template_specfile }}.bak0"
+              mv -v "${{ inputs.template_specfile }}" "${template}"
+          fi
+          cat "${template}" | sed -e "s/@@@Version@@@/${PKG_VERSION}/gi" \
+                                  -e "s/@@@Release@@@/${PKG_RELEASE}/gi" \
+                                  -e "s/@@@py_version_nodot@@@/${{ matrix.py_version_nodot }}/gi" \
+                                  -e "s/@@@py_version_dot@@@/${{ matrix.py_version_dot }}/gi" \
+                                  > "${SPECFILE}"
+
+          echo -e "Converting debian/changelog into RPM changelog format and appending it to ${SPECFILE}."
+          dch2speclog=dch2speclog
+          if [[ -x bin/dch2speclog ]] ; then
+              dch2speclog=bin/dch2speclog
+          fi
+          ${dch2speclog} debian/changelog >> "${SPECFILE}"
+
+          echo -e "\nGenerated '${SPECFILE}':"
+          cat "${SPECFILE}"
+          echo "<--"
+
+          rpm_macros="${HOME}/.rpmmacros"
+          echo -e "\nCreating '${rpm_macros}' ..."
+          echo "%__python3 /bin/python${{ matrix.py_version_dot }}" > "${rpm_macros}"
+          echo "%_signature gpg"                                    >>"${rpm_macros}"
+
+          if [[ -e "${{ inputs.password_file }}" ]] ; then
+              gpg_cmd="gpg --verbose --no-armor --batch --pinentry-mode loopback --no-secmem-warning"
+              gpg_cmd+=" --passphrase '${{ secrets.key_password }}'"
+              gpg_cmd+=" -u \"%{_gpg_name}\" -sbo %{__signature_filename} %{__plaintext_filename}"
+
+              echo "%_gpg_name ${{ inputs.key_id }}"                    >>"${rpm_macros}"
+              echo "%__gpg_sign_cmd %{__gpg} ${gpg_cmd}"                >>"${rpm_macros}"
+          fi
+
+          echo -e "\nGenerated '${rpm_macros}':"
+          cat "${rpm_macros}"
+          echo "<--"
+
+      - name: "Tweaking /usr/lib/rpm/rpmpopt-* ..."
+        shell: bash
+        run: |
+          echo -e "\nTweaking /usr/lib/rpm/rpmpopt-* ..."
+
+          ls -l --color=always /usr/lib/rpm/rpmpopt-*
+
+          rpmoptfile=$( ls -1 /usr/lib/rpm/rpmpopt-* | head -n 1 )
+
+          rpmoptfile_base=$( basename "${rpmoptfile}" )
+          rpmoptfile_dir=$( dirname "${rpmoptfile}" )
+          rpmoptfile_bak="${rpmoptfile_dir}/.~${rpmoptfile_base}.bak"
+
+          cp -p -v -i "${rpmoptfile}" "${rpmoptfile_bak}"
+          sed -i -e 's/\(--addsign.*\) <.*/\1\x27 \\/' "${rpmoptfile}"
+
+          ls -l --color=always "${rpmoptfile}" "${rpmoptfile_bak}"
+
+          diff -u "${rpmoptfile_bak}" "${rpmoptfile}" || true
+
+      - name: 'Finally creating RPMs'
+        shell: bash
+        run: |
+          cmd="rpmbuild -ba --nocheck --verbose --define \"_topdir $(pwd)/rpmdir\" \"${SPECFILE}\""
+          echo -e "\nExecuting ${cmd}"
+          eval ${cmd}
+
+          if [[ -e "${{ inputs.password_file }}" ]] ; then
+              echo -e "\nSigning packages ..."
+              for f in $( find rpmdir -type f -iname "*.rpm" ) ; do
+                  echo "  * ${f} ..."
+                  echo "Checking existing signature:"
+                  rpm --checksig "${f}" || true
+                  rpmsign --addsign "${f}"
+                  echo "Checking new signature:"
+                  rpm --checksig "${f}" || true
+                  echo "Show signature:"
+                  rpm -q --qf '%{SIGPGP:pgpsig} %{SIGGPG:pgpsig}\n' -p "${f}" || true
+              done
+          fi
+
+          echo -e "\nResults:"
+          find rpmdir/*RPMS -type f -print0 | xargs --null --no-run-if-empty ls -l -d --color=always
+
+      - name: 'Upload RPM Packages'
+        uses: actions/upload-artifact@v4
+        with:
+          name: rpm_pkgs_el${{ matrix.el_version }}
+          path: |
+            rpmdir/RPMS/*/*.rpm
+            rpmdir/SRPMS/*.rpm
+          retention-days: ${{ inputs.retention_days }}
+
+
+# vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list

@@ -1,0 +1,283 @@
+---
+
+name: "Building OS packages of a Python source package."
+
+################################################################################
+# yamllint disable-line rule:truthy
+on:
+  workflow_call:
+    inputs:
+      debian_email:
+        description: 'The mail address of the user, which will be used to update debian/chagelog.'
+        type: string
+        default: 'frank@brehm-online.com'
+      debian_fullname:
+        description: 'A human readable name of the user, which will be used to update debian/chagelog.'
+        type: string
+        default: 'Frank Brehm'
+      has_i18n:
+        description: 'Does the package support localisation and internationalisation?'
+        type: boolean
+        default: true
+      languages:
+        description: 'A list of languages, which will be supported, if has_i18n is true.'
+        type: string
+        default: '["de_DE.UTF-8", "en_US.UTF-8"]'
+      additional_locales:
+        description: 'A whitespace separated list of additional locales (except en_US.UTF-8)'
+        type: string
+        default: 'de_DE.UTF-8'
+      test_python_versions:
+        description: 'A list of Python versions, for which the package should be tested.'
+        type: string
+        default: '["3.6", "3.7", "3.8", "3.9", "3.10", "3.11", "3.12"]'
+      latest_python_version:
+        description: "The latest Python version for executing linter tests."
+        type: string
+        default: "3.12"
+      libdir:
+        description: "The directory in the workdir where the Python modules are located."
+        type: string
+        required: true
+      additional_files_flake8:
+        description: "Files or directories to check with flake8 additional to standard files and directories."
+        type: string
+      additional_scripts_shellcheck:
+        description: "Files or directories to check with shellcheck additional to standard files and directories."
+        type: string
+      additional_paths_yamllint:
+        description: "Files or directories to check with yamllint additional to standard files and directories."
+        type: string
+      retention_days:
+        description: "The days for keeping the generated packages at GitHub."
+        type: number
+        default: 8
+      latest_debian_version:
+        description: 'The short name of the latest stable Debian version.'
+        type: string
+        default: 'bookworm'
+      debian_versions:
+        description: 'Whitespace separated list of Debian and Ubuntu version to build the package for.'
+        type: string
+        default: 'debian-bullseye debian-bookworm debian-trixie ubuntu-focal ubuntu-jammy ubuntu-noble'
+      el_versions:
+        description: 'Whitespace separated list of Enterprise Linux versions to build the package for.'
+        type: string
+        default: 'el-8 el-9'
+      additional_debian_build_packages:
+        description: "A withespace separated list of Debian packages additional to the base build packages"
+        type: string
+      additional_rpm_build_packages:
+        description: "A withespace separated list of RPM packages additional to the base build packages"
+        type: string
+      password_file:
+        description: 'The file containing the password of the private GPG key.'
+        type: string
+        default: '.private/uhu.txt'
+      key_id:
+        description: 'The ID of the used private GPG key.'
+        type: string
+      timezone:
+        description: "The timezone used for this job."
+        type: string
+        default: 'Europe/Berlin'
+      own_yum_repo_server:
+        description: 'The FQDN of the own YUM repository server.'
+        type: string
+        default: 'repo.uhu-banane.de'
+      own_yum_repo_server_use_https:
+        description: 'Use HTTPS instead of HTTP as the URL schema for the own YUM repo server.'
+        type: boolean
+        default: false
+      own_yum_repo_name:
+        description: 'The name of the own Yum repository'
+        type: string
+        default: 'frank-brehm'
+      own_yum_repo_description:
+        description: 'The verbose description of the own Yum repository'
+        type: string
+        default: 'Frank Brehms Yum repository for Enterprise Linux %s'
+      own_yum_repo_root_path:
+        description: 'The root path on the own YUM repository server.'
+        type: string
+        default: '/Yum'
+      do_help2man:
+        description: 'Generate man pages of scripts by calling help2man'
+        type: boolean
+        default: true
+      template_specfile:
+        description: "The template spec file used to generate the final spec file for building RPM packages."
+        type: string
+        default: 'template.spec'
+      repo_dir:
+        description: 'The parent input directory on the receiving repository server.'
+        type: string
+        required: true
+      smtp_server_address:
+        description: 'The hostname or server address of the mailrelay.'
+        type: string
+        default: 'mail.uhu-banane.net'
+      smtp_server_port:
+        description: 'The TCP port of SMTP on the mailrelay.'
+        type: string
+        default: '587'
+      smtp_protocol:
+        description: "The protocol to use to communicate with the SMTP server. Maybe 'smtp' or 'smtp+starttls'."
+        type: string
+        default: 'smtp+starttls'
+      smtp_sender_address:
+        description: "The (maybe full qualified) FROM address for the sended mail."
+        type: string
+        default: 'Frank Brehm <frank@brehm-online.com>'
+      smtp_recipient_addresses:
+        description: 'Recipients mail addresses (separated with comma)'
+        type: string
+        default: 'frank@brehm-online.com,frank.brehm@pixelpark.com'
+    secrets:
+      pypi_token:
+        description: "The token to use for transmitting the package to PyPi"
+      public_key:
+        description: 'The exported public GPG key"'
+      private_key:
+        description: 'The exported private GPG key"'
+      key_password:
+        description: 'The password of the imported private GPG key.'
+      repo_server:
+        description: 'The hostname name of the repository server.'
+        required: true
+      repo_user:
+        description: 'The name of the user on the receiving repository server.'
+        required: true
+      ssh_private_key:
+        description: 'The private SSH key of the user on the receiving repository server.'
+        required: true
+      smtp_user:
+        description: 'Authenticate as this user to SMTP server'
+        required: true
+      smtp_password:
+        description: 'Authenticate with this password to SMTP server'
+        required: true
+
+################################################################################
+env:
+  DEBFULLNAME: ${{ inputs.debian_fullname }}
+  DEBEMAIL: ${{ inputs.debian_email }}
+
+################################################################################
+jobs:
+
+  ###########################
+  exec-pytest:
+    name: "Execute Python tests"
+    uses: ./.github/workflows/exec-python-tests.yaml
+    with:
+      has_i18n: ${{ inputs.has_i18n }}
+      languages: ${{ inputs.languages }}
+      test_python_versions: ${{ inputs.test_python_versions }}
+      latest_debian_version: ${{ inputs.latest_debian_version }}
+
+  ###########################
+  exec-python-linter:
+    name: "Exec linter checks on Python sources"
+    uses: ./.github/workflows/python-linter-tests.yaml
+    needs:
+      - exec-pytest
+    with:
+      latest_python_version: ${{ inputs.latest_python_version }}
+      libdir: ${{ inputs.libdir }}
+      additional_files_flake8: ${{ inputs.additional_files_flake8 }}
+      additional_scripts_shellcheck: ${{ inputs.additional_scripts_shellcheck }}
+      additional_paths_yamllint: ${{ inputs.additional_paths_yamllint }}
+
+  ###########################
+  deploy-to-pypi:
+    name: "Building the Python packages and deploying it to PyPi"
+    uses: ./.github/workflows/deploy-to-pypi.yaml
+    needs:
+      - exec-python-linter
+    with:
+      latest_python_version: ${{ inputs.latest_python_version }}
+      retention_days: ${{ inputs.retention_days }}
+    secrets:
+      pypi_token: ${{ secrets.pypi_token }}
+
+  ###########################
+  build-debian-packages:
+    name: "Building Debian packages"
+    uses: ./.github/workflows/build-python-debian-packages.yaml
+    needs:
+      - exec-python-linter
+    with:
+      additional_debian_build_packages: ${{ inputs.additional_debian_build_packages }}
+      additional_locales: ${{ inputs.additional_locales }}
+      debian_email: ${{ inputs.debian_email }}
+      debian_fullname: ${{ inputs.debian_fullname }}
+      debian_versions: ${{ inputs.debian_versions }}
+      do_help2man: ${{ inputs.do_help2man }}
+      has_i18n: ${{ inputs.has_i18n }}
+      key_id: ${{ inputs.key_id }}
+      languages: ${{ inputs.languages }}
+      latest_debian_version: ${{ inputs.latest_debian_version }}
+      password_file: ${{ inputs.password_file }}
+      retention_days: ${{ inputs.retention_days }}
+      timezone: ${{ inputs.timezone }}
+    secrets:
+      key_password: ${{ secrets.key_password }}
+      private_key: ${{ secrets.private_key }}
+      public_key: ${{ secrets.public_key }}
+
+  ###########################
+  build-rpm-packages:
+    name: "Building RPM packages"
+    uses: ./.github/workflows/build-python-rpm-packages.yaml
+    needs:
+      - exec-python-linter
+    with:
+      additional_locales: ${{ inputs.additional_locales }}
+      additional_rpm_build_packages: ${{ inputs.additional_rpm_build_packages }}
+      debian_email: ${{ inputs.debian_email }}
+      debian_fullname: ${{ inputs.debian_fullname }}
+      do_help2man: ${{ inputs.do_help2man }}
+      el_versions: ${{ inputs.el_versions }}
+      has_i18n: ${{ inputs.has_i18n }}
+      key_id: ${{ inputs.key_id }}
+      languages: ${{ inputs.languages }}
+      latest_debian_version: ${{ inputs.latest_debian_version }}
+      own_repo_description: ${{ inputs.own_yum_repo_description }}
+      own_repo_name: ${{ inputs.own_yum_repo_name }}
+      own_repo_root_path: ${{ inputs.own_yum_repo_root_path }}
+      own_repo_server: ${{ inputs.own_yum_repo_server }}
+      own_repo_server_use_https: ${{ inputs.own_yum_repo_server_use_https }}
+      password_file: ${{ inputs.password_file }}
+      retention_days: ${{ inputs.retention_days }}
+      template_specfile: ${{ inputs.template_specfile }}
+      timezone: ${{ inputs.timezone }}
+    secrets:
+      key_password: ${{ secrets.key_password }}
+      private_key: ${{ secrets.private_key }}
+      public_key: ${{ secrets.public_key }}
+
+  ###########################
+  deploy-to-repos:
+    name: "Deployment of all OS packages to the own repo server"
+    uses: ./.github/workflows/deploy-to-reposerver.yaml
+    needs:
+      - build-debian-packages
+      - build-rpm-packages
+      - deploy-to-pypi
+    with:
+      repo_dir: ${{ inputs.repo_dir }}
+      smtp_server_address: ${{ inputs.smtp_server_address }}
+      smtp_server_port: ${{ inputs.smtp_server_port }}
+      smtp_protocol: ${{ inputs.smtp_protocol }}
+      smtp_sender_address: ${{ inputs.smtp_sender_address }}
+      smtp_recipient_addresses: ${{ inputs.smtp_recipient_addresses }}
+    secrets:
+      repo_server: ${{ secrets.repo_server }}
+      repo_user: ${{ secrets.repo_user }}
+      ssh_private_key: ${{ secrets.ssh_private_key }}
+      smtp_user: ${{ secrets.smtp_user }}
+      smtp_password: ${{ secrets.smtp_password }}
+
+
+# vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list

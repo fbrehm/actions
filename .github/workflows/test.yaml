@@ -1,0 +1,50 @@
+---
+
+name: "Building OS packages"
+
+# yamllint disable-line rule:truthy
+on:
+  push:
+    branches:
+      - '**'
+      - '!dev-**'
+      - '!dev/**'
+      - '!hf**'
+      - '!old**'
+      - '!feature**'
+    tags:
+      - '**'
+  pull_request:
+    branches:
+      - '**'
+      - '!dev-**'
+      - '!dev/**'
+      - '!hf**'
+      - '!old**'
+      - '!feature**'
+
+jobs:
+
+  linter:
+    if: github.event_name != 'pull_request' || !contains('OWNER,MEMBER,COLLABORATOR', github.event.pull_request.author_association)
+    runs-on: ubuntu-latest
+    name: Executing Linters
+    container: python:3.12
+    steps:
+      - name: Check out sources
+        uses: actions/checkout@v4
+      - name: Preparing the Debian container
+        uses: fbrehm/prepare-debian-container@main
+        with:
+          manage_locales: false
+      - name: Installing PIP modules and linter tools
+        uses: fbrehm/github-install-pip-modules@main
+        with:
+          install_linter_tools: true
+      - name: Show Environment
+        shell: bash
+        run: env | sort
+      - name: Execute Yamllint
+        run: yamllint .github
+
+# vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list

@@ -1,0 +1,561 @@
+---
+
+name: "Building Debian packages of a Python source package."
+
+################################################################################
+# yamllint disable-line rule:truthy
+on:
+  workflow_call:
+    inputs:
+      debian_email:
+        description: 'The mail address of the user, which will be used to update debian/chagelog.'
+        type: string
+        default: 'frank@brehm-online.com'
+      debian_fullname:
+        description: 'A human readable name of the user, which will be used to update debian/chagelog.'
+        type: string
+        default: 'Frank Brehm'
+      has_i18n:
+        description: 'Does the package support localisation and internationalisation?'
+        type: boolean
+        default: true
+      languages:
+        description: 'A list of languages, which will be supported, if has_i18n is true.'
+        type: string
+        default: '["de_DE.UTF-8", "en_US.UTF-8"]'
+      additional_locales:
+        description: 'A whitespace separated list of additional locales (except en_US.UTF-8)'
+        type: string
+        default: 'de_DE.UTF-8'
+      latest_debian_version:
+        description: 'The short name of the latest stable Debian version.'
+        type: string
+        default: 'bookworm'
+      debian_versions:
+        description: 'Whitespace separated list of Debian and Ubuntu versions to build the package for.'
+        type: string
+        default: 'debian-bullseye debian-bookworm debian-trixie ubuntu-focal ubuntu-jammy ubuntu-noble'
+      additional_debian_build_packages:
+        description: "A withespace separated list of packages additional to the base build packages"
+        type: string
+      password_file:
+        description: 'The file containing the password of the private GPG key.'
+        type: string
+        default: '.private/uhu.txt'
+      key_id:
+        description: 'The ID of the used private GPG key.'
+        type: string
+      retention_days:
+        description: "The days for keeping the generated packages at GitHub."
+        type: number
+        default: 8
+      timezone:
+        description: "The timezone used for this job."
+        type: string
+        default: 'Europe/Berlin'
+      do_help2man:
+        description: 'Generate man pages of scripts by calling help2man'
+        type: boolean
+        default: true
+    secrets:
+      public_key:
+        description: 'The exported public GPG key"'
+      private_key:
+        description: 'The exported private GPG key"'
+      key_password:
+        description: 'The password of the imported private GPG key.'
+
+################################################################################
+env:
+  DEBFULLNAME: ${{ inputs.debian_fullname }}
+  DEBEMAIL: ${{ inputs.debian_email }}
+  GIT_REF: ${{ github.ref }}
+  GIT_REFNAME: ${{ github.ref_name }}
+  GIT_REFTYPE: ${{ github.ref_type }}
+
+################################################################################
+jobs:
+
+  ###########################
+  define-debian-build-matrix:
+    name: "Defining the Matrix for building Debian packages"
+    runs-on: ubuntu-latest
+    if: ${{ github.ref_name == 'main' || github.ref_name == 'master' || startsWith(github.ref_name, 'test') || github.ref_name == 'dev/workflow' || startsWith(github.ref, 'refs/tags/')  }}
+    container: debian:${{ inputs.latest_debian_version }}
+    env:
+      DEBIAN_VERSIONS: ${{ inputs.debian_versions }}
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: "Update package lists"
+        id: apt-update
+        shell: bash
+        run: |
+          echo "Update all package lists."
+          apt update --yes
+
+      - name: "Install JQ"
+        shell: bash
+        run: |
+          apt install --yes jq
+          echo -e "\nVersion of JQ: $( jq --version )"
+
+      - name: "Defining the build-matrix"
+        id: set-matrix
+        shell: bash
+        run: |
+          if [[ -z "${DEBIAN_VERSIONS}" ]] ; then
+            echo "::error::No Debian or Ubuntu versions given for building packages."
+            exit 5
+          fi
+          matrix_json='{"include": ['
+          first_distro='y'
+
+          for deb_version in ${DEBIAN_VERSIONS}; do
+            deb_version_lc=$( echo "${deb_version}" | tr '[:upper:]' '[:lower:]' )
+            echo "::debug::Performing Debian version '${deb_version}' -> '${deb_version_lc}'"
+            case "${deb_version_lc}" in
+              debian-bullseye)
+                if [[ "${first_distro}" != 'y' ]] ; then
+                  matrix_json+=", "
+                fi
+                matrix_json+="{"
+                matrix_json+="\"title\": \"Debian 11 Bullseye\", "
+                matrix_json+="\"distributor\": \"Debian\", "
+                matrix_json+="\"os_codename\": \"bullseye\", "
+                matrix_json+="\"os_release\": \"11\", "
+                matrix_json+="\"container\": \"debian:bullseye\", "
+                matrix_json+="\"version_prefix\": \"deb11\", "
+                matrix_json+="\"compat\": \"12\""
+                matrix_json+="}"
+                echo "::notice title=Define Debian build matrix::Adding Debian 11 Bullseye"
+                ;;
+              debian-bookworm)
+                if [[ "${first_distro}" != 'y' ]] ; then
+                  matrix_json+=", "
+                fi
+                matrix_json+="{"
+                matrix_json+="\"title\": \"Debian 12 Bookworm\", "
+                matrix_json+="\"distributor\": \"Debian\", "
+                matrix_json+="\"os_codename\": \"bookworm\", "
+                matrix_json+="\"os_release\": \"12\", "
+                matrix_json+="\"container\": \"debian:bookworm\", "
+                matrix_json+="\"version_prefix\": \"deb12\", "
+                matrix_json+="\"compat\": \"12\""
+                matrix_json+="}"
+                echo "::notice title=Define Debian build matrix::Adding Debian 12 Bookworm"
+                ;;
+              debian-trixie)
+                if [[ "${first_distro}" != 'y' ]] ; then
+                  matrix_json+=", "
+                fi
+                matrix_json+="{"
+                matrix_json+="\"title\": \"Debian 13 Trixie\", "
+                matrix_json+="\"distributor\": \"Debian\", "
+                matrix_json+="\"os_codename\": \"trixie\", "
+                matrix_json+="\"os_release\": \"13\", "
+                matrix_json+="\"container\": \"debian:trixie\", "
+                matrix_json+="\"version_prefix\": \"deb13\", "
+                matrix_json+="\"compat\": \"13\""
+                matrix_json+="}"
+                echo "::notice title=Define Debian build matrix::Adding Debian 13 Trixie"
+                ;;
+              ubuntu-focal)
+                if [[ "${first_distro}" != 'y' ]] ; then
+                  matrix_json+=", "
+                fi
+                matrix_json+="{"
+                matrix_json+="\"title\": \"Ubuntu 20.04 Focal Fossa\", "
+                matrix_json+="\"distributor\": \"Ubuntu\", "
+                matrix_json+="\"os_codename\": \"focal\", "
+                matrix_json+="\"os_release\": \"20.04\", "
+                matrix_json+="\"container\": \"ubuntu:focal\", "
+                matrix_json+="\"version_prefix\": \"ubuntu20.04\", "
+                matrix_json+="\"compat\": \"12\""
+                matrix_json+="}"
+                echo "::notice title=Define Debian build matrix::Adding Ubuntu 20.04 Focal Fossa"
+                ;;
+              ubuntu-jammy)
+                if [[ "${first_distro}" != 'y' ]] ; then
+                  matrix_json+=", "
+                fi
+                matrix_json+="{"
+                matrix_json+="\"title\": \"Ubuntu 22.04 Jammy Jellyfish\", "
+                matrix_json+="\"distributor\": \"Ubuntu\", "
+                matrix_json+="\"os_codename\": \"jammy\", "
+                matrix_json+="\"os_release\": \"22.04\", "
+                matrix_json+="\"container\": \"ubuntu:jammy\", "
+                matrix_json+="\"version_prefix\": \"ubuntu22.04\", "
+                matrix_json+="\"compat\": \"12\""
+                matrix_json+="}"
+                echo "::notice title=Define Debian build matrix::Adding Ubuntu 22.04 Jammy Jellyfish"
+                ;;
+              ubuntu-noble)
+                if [[ "${first_distro}" != 'y' ]] ; then
+                  matrix_json+=", "
+                fi
+                matrix_json+="{"
+                matrix_json+="\"title\": \"Ubuntu 22.04 Noble Numbat\", "
+                matrix_json+="\"distributor\": \"Ubuntu\", "
+                matrix_json+="\"os_codename\": \"noble\", "
+                matrix_json+="\"os_release\": \"24.04\", "
+                matrix_json+="\"container\": \"ubuntu:noble\", "
+                matrix_json+="\"version_prefix\": \"ubuntu24.04\", "
+                matrix_json+="\"compat\": \"12\""
+                matrix_json+="}"
+                echo "::notice title=Define Debian build matrix::Adding Ubuntu 24.04 Noble Numbat"
+                ;;
+              *)
+                echo "::error title=Define Debian build matrix::Unknown Debian or Ubuntu version '${deb_version}' given." >&2
+                exit 6
+                ;;
+            esac
+            first_distro='n'
+          done
+
+          matrix_json+="]}"
+
+          echo -e "\nGenerated JSON:"
+          echo "${matrix_json}" | jq -C .
+
+          echo "matrix=${matrix_json}" >> ${GITHUB_OUTPUT}
+          echo "::debug::Using Matrix: $( cat ${GITHUB_OUTPUT} )"
+
+  ###########################
+  build-debian-sources:
+    runs-on: ubuntu-latest
+    name: "Building Debian Source Packages"
+    if: ${{ github.ref_name == 'main' || github.ref_name == 'master' || startsWith(github.ref_name, 'test') || github.ref_name == 'dev/workflow' || startsWith(github.ref, 'refs/tags/')  }}
+    container: debian:${{ inputs.latest_debian_version }}
+    env:
+      DEBIAN_VERSION: ${{ inputs.latest_debian_version }}
+    steps:
+      - name: "Checking out sources."
+        uses: actions/checkout@v4
+
+      - name: "Set and show Environment"
+        shell: bash
+        run: |
+          export PKG_NAME=$( head -n 1 debian/changelog | awk '{print $1}' )
+          export PKG_VERSION=$( head -n 1 debian/changelog | sed -e "s/^[^(]*(//" -e "s/).*//" )
+          export SIGNING_HOOK_SCRIPT="${HOME}/signing-hook-script.sh"
+
+          echo "PKG_NAME=${PKG_NAME}" >>"$GITHUB_ENV"
+          echo "PKG_VERSION=${PKG_VERSION}" >>"$GITHUB_ENV"
+          echo "SIGNING_HOOK_SCRIPT=${SIGNING_HOOK_SCRIPT}" >>"$GITHUB_ENV"
+
+          echo "::notice::Building Debian source package on Debian ${DEBIAN_VERSION}."
+          if [[ -f /etc/os-release ]] ; then
+            echo -e "\nOS release for building source package:"
+            cat /etc/os-release
+          fi
+          echo -e "\nBash enviroment:"
+          env | sort
+
+      - name: 'Adding Debian repo definitions of Frank Brehm'
+        uses: fbrehm/github-add-fb-debian-repo@main
+        with:
+          vendor: Debian
+          distro: ${{ inputs.latest_debian_version }}
+
+      - name: "Preparing the Debian container"
+        uses: fbrehm/prepare-debian-container@main
+        with:
+          manage_locales: false
+
+      - name: "Install Debian Python Build Environment"
+        uses: fbrehm/debian-install-python-buildenv@main
+        with:
+          additional_packages: ${{ inputs.additional_debian_build_packages }}
+
+      - name: 'Preparing GPG for signing files without entering a password'
+        uses: fbrehm/github-setup-gpg@main
+        with:
+          public_key: ${{ secrets.public_key }}
+          private_key: ${{ secrets.private_key }}
+          key_password: ${{ secrets.key_password }}
+          password_file: ${{ inputs.password_file }}
+          key_id: ${{ inputs.key_id }}
+
+      - name: 'Create signing hook script of building source package.'
+        shell: bash
+        run: |
+          dsc_file="${PKG_NAME}_${PKG_VERSION}.dsc"
+          buildinfo_file="${PKG_NAME}_${PKG_VERSION}_source.buildinfo"
+          changes_file="${PKG_NAME}_${PKG_VERSION}_source.changes"
+
+          if [[ -e "${{ inputs.password_file }}" ]] ; then
+            hash_bang='#!/usr/bin/env bash'
+            shell_lines=$( cat <<-EOF
+          	${hash_bang}
+          	echo
+          	echo "This is the signing script."
+          	echo "==========================="
+          	echo
+          	printf "Command line: "
+          	echo \$0 \$*
+          	printf "Pwd: "
+          	pwd
+          	echo
+          	echo "Current sources:"
+          	ls -l --color=always '${dsc_file}' '${buildinfo_file}' '${changes_file}'
+          	echo
+          	cmd="echo 'y' | debsign -k${{ inputs.key_id }} '${dsc_file}' '${buildinfo_file}' '${changes_file}'"
+          	echo "Executing: \$cmd"
+          	eval \$cmd
+          	echo
+          	echo "Signed sources:"
+          	ls -l --color=always '${dsc_file}' '${buildinfo_file}' '${changes_file}'
+          	echo
+          	EOF
+            )
+
+            echo "${shell_lines}" > "${SIGNING_HOOK_SCRIPT}"
+            chmod +x --verbose "${SIGNING_HOOK_SCRIPT}"
+
+            echo -e "\nGenerated ${SIGNING_HOOK_SCRIPT}:"
+            cat "${SIGNING_HOOK_SCRIPT}"
+            echo "<--"
+
+            echo -e "\nThe imported private keys:"
+            gpg --list-secret-keys
+            echo "<-- EOF"
+
+          else
+
+            echo -e "\nDon't create '${SIGNING_HOOK_SCRIPT}' because of failing necessary data."
+
+          fi
+
+      - name: 'Finally build the source package.'
+        shell: bash
+        run: |
+          if [[ -e "${{ inputs.password_file }}" && -x "${SIGNING_HOOK_SCRIPT}" ]] ; then
+            echo "::notice title=build-debian-sorce-package::Building signed Debian source package for ${PKG_NAME}-${PKG_VERSION}"
+            echo "y" | debuild --signing-hook="${SIGNING_HOOK_SCRIPT}" -S -i
+          else
+            echo "::notice title=build-debian-sorce-package::Building unsigned Debian source package for ${PKG_NAME}-${PKG_VERSION}"
+            debuild -S -i --no-sign
+          fi
+
+          echo -e "\nGenerated stuff:"
+          ls -lA --color=always ..
+          echo "<-- EOF"
+
+          echo -e "\nMoving all to the right place ..."
+          mkdir -pv debian/pkgs/src
+          mv -vi ../*.dsc ../*.tar.* ../*.build* ../*.changes debian/pkgs/src
+
+          echo -e "\nStuff now at the right place:"
+          ls -lA --color=always debian/pkgs/*/*
+          echo "<-- EOF"
+
+      - name: 'Upload Source Package'
+        uses: actions/upload-artifact@v4
+        with:
+          name: debian_sources
+          path: debian/pkgs/*/*
+          retention-days: ${{ inputs.retention_days }}
+
+  ###########################
+  build-debian-bin:
+    runs-on: ubuntu-latest
+    needs:
+      - define-debian-build-matrix
+    name: Building Debian Binary Packages for ${{ matrix.title }}
+    if: ${{ github.ref_name == 'main' || github.ref_name == 'master' || startsWith(github.ref_name, 'test') || github.ref_name == 'dev/workflow' || startsWith(github.ref, 'refs/tags/')  }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.define-debian-build-matrix.outputs.matrix) }}
+    container: ${{ matrix.container }}
+    env:
+      BUILDER: ${{ inputs.debian_fullname }} <${{ inputs.debian_email }}>
+      COMPAT: ${{ matrix.compat }}
+      DEBIAN_FRONTEND: noninteractive
+      DISTRIBUTOR: ${{ matrix.distributor }}
+      OS_CODENAME: ${{ matrix.os_codename }}
+      OS_RELEASE: ${{ matrix.os_release }}
+      OS_TITLE: ${{ matrix.title }}
+      VERSION_PREFIX: ${{ matrix.version_prefix }}
+      MAN_SECTION: 1
+    steps:
+      - name: "Checking out sources."
+        uses: actions/checkout@v4
+
+      - name: "Set and show Environment"
+        shell: bash
+        run: |
+          export PKG_NAME=$( head -n 1 debian/changelog | awk '{print $1}' )
+          export PKG_VERSION=$( head -n 1 debian/changelog | sed -e "s/^[^(]*(//" -e "s/).*//" )
+          export SIGNING_HOOK_SCRIPT="${HOME}/signing-hook-script.sh"
+          export BUILD_VERSION="${PKG_VERSION}+${{ matrix.version_prefix }}"
+          export TZ="${{ inputs.timezone }}"
+
+          echo "PKG_NAME=${PKG_NAME}" >>"$GITHUB_ENV"
+          echo "PKG_VERSION=${PKG_VERSION}" >>"$GITHUB_ENV"
+          echo "SIGNING_HOOK_SCRIPT=${SIGNING_HOOK_SCRIPT}" >>"$GITHUB_ENV"
+          echo "BUILD_VERSION=${BUILD_VERSION}" >>"$GITHUB_ENV"
+          echo "TZ=${TZ}" >>"$GITHUB_ENV"
+
+          echo "::notice::Building Debian binary packages on ${OS_TITLE}."
+          if [[ -f /etc/os-release ]] ; then
+            echo -e "\nOS release:"
+            cat /etc/os-release
+          fi
+          echo -e "\nBash enviroment:"
+          env | sort
+
+      - name: 'Setting timezone'
+        if: ${{ matrix.distributor == 'Ubuntu' }}
+        run: |
+          echo -e "\nSetting system timezone to '${TZ}' ..."
+          ln -fvs /usr/share/zoneinfo/${{ inputs.timezone }} /etc/localtime
+          echo -e "\nCurrent date: $( date --rfc-3339=seconds )"
+
+      - name: 'Adding Debian repo definitions of Frank Brehm'
+        uses: fbrehm/github-add-fb-debian-repo@main
+        with:
+          vendor: ${{ matrix.distributor }}
+          distro: ${{ matrix.os_codename }}
+
+      - name: "Preparing the Debian container"
+        uses: fbrehm/prepare-debian-container@main
+        with:
+          manage_locales: ${{ inputs.has_i18n }}
+          additional_locales: ${{ inputs.additional_locales }}
+
+      - name: "Install Debian Python Build Environment"
+        uses: fbrehm/debian-install-python-buildenv@main
+        with:
+          additional_packages: ${{ inputs.additional_debian_build_packages }}
+
+      - name: 'Preparing GPG for signing files without entering a password'
+        uses: fbrehm/github-setup-gpg@main
+        with:
+          public_key: ${{ secrets.public_key }}
+          private_key: ${{ secrets.private_key }}
+          key_password: ${{ secrets.key_password }}
+          password_file: ${{ inputs.password_file }}
+          key_id: ${{ inputs.key_id }}
+
+      - name: 'Creating man pages'
+        if: ${{ inputs.do_help2man }}
+        shell: bash
+        run: |
+          echo -e "\nCreating MAN pages."
+
+          man_dir="usr/share/man/man${MAN_SECTION}"
+          mkdir -p -v "${man_dir}"
+          for script in bin/* ; do
+              if [[ ! -x "${script}" ]] ; then
+                  continue
+              fi
+              script_base=$( basename "${script}" )
+              man_file_base="${script_base}.${MAN_SECTION}.gz"
+              man_file="${man_dir}/${man_file_base}"
+              echo "  * ${man_file_base}"
+              cmd="help2man --no-info --no-discard-stderr"
+              cmd+=" --version-string \"${PKG_VERSION}\""
+              cmd+=" --section ${MAN_SECTION}"
+              cmd+=" \"${script}\" | gzip -v9"
+              echo "      Executing: ${cmd} > \"${man_file}\""
+              eval ${cmd} > "${man_file}"
+          done
+
+      - name: 'Updating Changelog'
+        shell: bash
+        run: |
+          echo -e "\nVersion to build: ${BUILD_VERSION} - Builder: ${BUILDER}"
+          msg="Build for ${{ matrix.distributor }} ${{ matrix.os_release }} - ${{ matrix.os_codename }}"
+          echo "::notice title=Build Debian binary packages::${msg}"
+
+          echo -e "\nAdding new changelog entry ..."
+          debchange --newversion "${BUILD_VERSION}" --force-bad-version --distribution "${{ matrix.os_codename }}" --urgency medium "${msg}"
+          head -n 5 debian/changelog
+
+      - name: 'Create signing hook script of building binary package.'
+        shell: bash
+        run: |
+          if [[ -e "${{ inputs.password_file }}" ]] ; then
+            hash_bang='#!/usr/bin/env bash'
+
+            shell_lines=$( cat <<-EOF
+          	${hash_bang}
+          	echo
+          	echo "This is the signing script."
+          	echo "==========================="
+          	echo
+          	printf "Command line: "
+          	echo \$0 \$*
+          	printf "Pwd: "
+          	pwd
+          	echo
+          	echo "Avaiable secret keys:"
+          	gpg --list-secret-keys
+          	echo
+          	echo "Current packages:"
+          	ls -l --color=always *.deb
+          	echo
+          	cmd="debsigs --sign=origin --default-key=${{ inputs.key_id }} *.deb"
+          	echo "Executing: \$cmd"
+          	eval \$cmd
+          	echo
+          	echo "Signed packages:"
+          	ls -l --color=always *.deb
+          	echo
+          	EOF
+            )
+
+            echo "${shell_lines}" > "${SIGNING_HOOK_SCRIPT}"
+            chmod +x --verbose "${SIGNING_HOOK_SCRIPT}"
+
+            echo -e "\nGenerated ${SIGNING_HOOK_SCRIPT}:"
+            cat "${SIGNING_HOOK_SCRIPT}"
+            echo "<--"
+
+            echo -e "\nThe imported private keys:"
+            gpg --list-secret-keys
+            echo "<-- EOF"
+
+          else
+
+            echo -e "\nDon't create '${SIGNING_HOOK_SCRIPT}' because of failing necessary data."
+
+          fi
+
+      - name: 'Finally build the binary package.'
+        shell: bash
+        run: |
+          echo -e -n "\nSetting debian/compat to "
+          echo "${{ matrix.compat }}"
+          echo "${{ matrix.compat }}" > debian/compat
+
+          if [[ -e "${{ inputs.password_file }}" && -x "${SIGNING_HOOK_SCRIPT}" ]] ; then
+            echo "::notice title=build-debian-sorce-package::Building signed Debian binary package for ${PKG_NAME}-${BUILD_VERSION}"
+            echo "y" | debuild --signing-hook="${SIGNING_HOOK_SCRIPT}" -b -i -us -uc -ui
+          else
+            echo "::notice title=build-debian-sorce-package::Building unsigned Debian binary package for ${PKG_NAME}-${BUILD_VERSION}"
+            debuild -b -i --no-sign
+          fi
+
+          echo -e "\nGenerated stuff:"
+          ls -lA --color=always ..
+          echo "<-- EOF"
+
+          echo -e "\nMoving all to the right place ..."
+          mkdir -pv debian/pkgs/${{ matrix.version_prefix }}
+          mv -vi ../*.deb ../*.build* debian/pkgs/${{ matrix.version_prefix }}
+
+          echo -e "\nStuff now at the right place:"
+          ls -lA --color=always debian/pkgs/*/*
+          echo "<-- EOF"
+
+      - name: 'Upload Source Package'
+        uses: actions/upload-artifact@v4
+        with:
+          name: debian_bin_pkgs_${{ matrix.version_prefix }}
+          path: debian/pkgs/*/*
+          retention-days: ${{ inputs.retention_days }}
+
+
+# vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list

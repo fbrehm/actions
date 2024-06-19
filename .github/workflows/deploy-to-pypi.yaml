@@ -1,0 +1,77 @@
+---
+
+name: "Deployment of the Python package to PyPi"
+
+################################################################################
+# yamllint disable-line rule:truthy
+on:
+  workflow_call:
+    inputs:
+      latest_python_version:
+        description: "The latest Python version for executing linter tests."
+        type: string
+        default: "3.12"
+      retention_days:
+        description: "The days for keeping the generated packages at GitHub."
+        type: number
+        default: 8
+    secrets:
+      pypi_token:
+        description: "The token to use for transmitting the package to PyPi"
+
+################################################################################
+jobs:
+
+  ###########################
+  deploy_to_pypi:
+    runs-on: ubuntu-latest
+    name: "Deployment of the Python package to PyPi"
+    container: python:${{ inputs.latest_python_version }}
+    env:
+      PYPI_TOKEN_GIVEN: ${{ secrets.pypi_token && 'given' || 'NOT given' }}
+    steps:
+      - name: "Checking out the sources."
+        uses: actions/checkout@v4
+
+      - name: "Preparing the Debian container"
+        uses: fbrehm/prepare-debian-container@main
+        with:
+          manage_locales: true
+          additional_locales: ''
+
+      - name: "Installing necessary PIP modules."
+        uses: fbrehm/github-install-pip-modules@main
+        with:
+          install_pytest: false
+          install_linter_tools: false
+
+      - name: "Show Environment"
+        shell: bash
+        run: |
+          echo "Bash enviroment:"
+          env | sort
+          echo -e "\nPython version:"
+          python --version
+          echo -e "\nPypi token was ${PYPI_TOKEN_GIVEN}"
+
+      - name: "Building the Python packages and deploying it to PyPi."
+        uses: casperdcl/deploy-pypi@v2
+        with:
+          password: ${{ secrets.pypi_token }}
+          pip: wheel -w dist/ --no-deps .
+          build: clean sdist -d dist/ bdist_wheel -d dist/
+          # only upload if a tag is pushed (otherwise just build & check)
+          upload: ${{ github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags') && secrets.pypi_token != '' }}
+
+      - name: 'Show results'
+        shell: bash
+        run: ls -l --color=always dist/
+
+      - name: 'Upload Python Package'
+        uses: actions/upload-artifact@v4
+        with:
+          name: python_pkgs
+          path: dist/*
+          retention-days: ${{ inputs.retention_days }}
+
+# vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list
