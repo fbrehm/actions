@@ -382,7 +382,7 @@ jobs:
         run: |
           echo "Installing build tools"
 
-          cmd="dnf ${DNF_ENABLE_REPO} --assumeyes install gnupg2 rpm-build gettext help2man"
+          cmd="dnf ${DNF_ENABLE_REPO} --assumeyes install gnupg2 rpm-build rpm-sign gettext help2man"
           echo -e "\nCalling: ${cmd}"
           eval ${cmd}
 
@@ -502,7 +502,7 @@ jobs:
               gpg_cmd+=" --passphrase '${{ secrets.key_password }}'"
               gpg_cmd+=" -u \"%{_gpg_name}\" -sbo %{__signature_filename} %{__plaintext_filename}"
 
-              echo "%_gpg_name ${{ inputs.gpg_id }}"                    >>"${rpm_macros}"
+              echo "%_gpg_name ${{ inputs.key_id }}"                    >>"${rpm_macros}"
               echo "%__gpg_sign_cmd %{__gpg} ${gpg_cmd}"                >>"${rpm_macros}"
           fi
 

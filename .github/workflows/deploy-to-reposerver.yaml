@@ -6,6 +6,31 @@ name: "Deployment of all OS packages to the own repo server"
 # yamllint disable-line rule:truthy
 on:
   workflow_call:
+    inputs:
+      repo_dir:
+        description: 'The parent input directory on the receiving repository server.'
+        type: string
+        required: true
+      smtp_server_address:
+        description: 'The hostname or server address of the mailrelay.'
+        type: string
+        default: 'mail.uhu-banane.net'
+      smtp_server_port:
+        description: 'The TCP port of SMTP on the mailrelay.'
+        type: string
+        default: '587'
+      smtp_protocol:
+        description: "The protocol to use to communicate with the SMTP server. Maybe 'smtp' or 'smtp+starttls'."
+        type: string
+        default: 'smtp+starttls'
+      smtp_sender_address:
+        description: "The (maybe full qualified) FROM address for the sended mail."
+        type: string
+        default: 'Frank Brehm <frank@brehm-online.com>'
+      smtp_recipient_addresses:
+        description: 'Recipients mail addresses (separated with comma)'
+        type: string
+        default: 'frank@brehm-online.com,frank.brehm@pixelpark.com'
     secrets:
       repo_server:
         description: 'The hostname name of the repository server.'
@@ -16,9 +41,17 @@ on:
       ssh_private_key:
         description: 'The private SSH key of the user on the receiving repository server.'
         required: true
-      repo_dir:
-        description: 'The parent input directory on the receiving repository server.'
+      smtp_user:
+        description: 'Authenticate as this user to SMTP server'
         required: true
+      smtp_password:
+        description: 'Authenticate with this password to SMTP server'
+        required: true
+
+################################################################################
+defaults:
+  run:
+    shell: bash
 
 ################################################################################
 jobs:
@@ -38,16 +71,25 @@ jobs:
         with:
           path: artifacts
 
+      - name: "Got current stuff."
+        run: |
+          echo -e "\nAll current artifacts:"
+          find artifacts -print0 | xargs --null --no-run-if-empty ls -l -d --color=always
+
       - name: 'Sorting all artifacts'
         shell: bash
         run: |
-          mv -vi artifacts/debian_bin_pkgs_*/* artifacts/
-          mv -vi artifacts/debian_sources/src artifacts/
+          mv -vi artifacts/python_pkgs artifacts/python
+
+          mkdir -pv artifacts/debian artifacts/el
+          mv -vi artifacts/debian_bin_pkgs_*/* artifacts/debian/
+          mv -vi artifacts/debian_sources/src artifacts/debian/
           rmdir -v artifacts/debian_bin_pkgs_* artifacts/debian_sources
+
           for el_version in 7 8 9 10 ; do
             if [[ -d artifacts/rpm_pkgs_el${el_version} ]]; then
-              mkdir -pv artifacts/el-${el_version}
-              mv -vi artifacts/rpm_pkgs_el${el_version}/*/*/*.rpm artifacts/rpm_pkgs_el${el_version}/*/*.rpm artifacts/el-${el_version}/
+              mkdir -pv artifacts/el/el-${el_version}
+              mv -vi artifacts/rpm_pkgs_el${el_version}/*/*/*.rpm artifacts/rpm_pkgs_el${el_version}/*/*.rpm artifacts/el/el-${el_version}/
             fi
           done
           rm -rv artifacts/rpm_pkgs_el*
@@ -74,22 +116,40 @@ jobs:
           cat ~/.ssh/known_hosts
           echo "<--"
 
-      - name: 'Deploy Debian packages with rsync'
+      - name: "Finally deploy packaes."
         run: |
-
-          cmd="rsync -aHvz artifacts/deb* artifacts/ubuntu* artifacts/src"
-          cmd+=" ${{ secrets.repo_user }}@${{ secrets.repo_server }}:${{ secrets.repo_dir}}/debian/"
-
+          cmd="rsync -aHvz artifacts/ ${{ secrets.repo_user }}@${{ secrets.repo_server }}:${{ inputs.repo_dir }}/"
           echo -e "\nExecuting: ${cmd}"
           eval ${cmd}
 
-      - name: 'Deploy RPM packages with rsync'
-        run: |
+  ###########################
+  notify_success:
+    runs-on: ubuntu-latest
+    name: Sending Success message
+    needs:
+      - 'deploy_to_repo'
+    steps:
+      - name: Sending message
+        uses: dawidd6/action-send-mail@v3
+        with:
+          # mail server settings
+          # connection_url: "${{ inputs.smtp_protocol }}://${{ secrets.smtp_user }}:${{ secrets.smtp_password }}@${{ inputs.smtp_server_address }}:${{ inputs.smtp_server_port }}"
+          server_address: ${{ inputs.smtp_server_address }}
+          server_port: ${{ inputs.smtp_server_port }}
+          username: ${{ secrets.smtp_user }}
+          password: ${{ secrets.smtp_password }}
+          # email subject
+          subject: Github Workflow ${{ github.workflow }} of ${{ github.repository }} for ${{ github.ref_type }} ${{ github.ref_name }} was successful.
+          # email body as text
+          body: |
+            Github Actions Workflow ${{ github.workflow }} of ${{ github.repository }} for ${{ github.ref_type }} ${{ github.ref_name }} was successful.
+            Commiter: ${{ github.actor }}
 
-          cmd="rsync -aHvz artifacts/el-* ${{ secrets.repo_user }}@${{ secrets.repo_server }}:${W{ secrets.repo_dir}/el/"
-
-          echo -e "\nExecuting: ${cmd}"
-          eval ${cmd}
+            Cheers Frank
+          # comma-separated string, send email to
+          to: ${{ inputs.smtp_recipient_addresses }}
+          # from email name
+          from: ${{ inputs.smtp_sender_address }}
 
 
 # vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list
