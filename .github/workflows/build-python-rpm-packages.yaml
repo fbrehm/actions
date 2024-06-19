@@ -407,7 +407,7 @@ jobs:
           eval ${cmd}
 
       - name: 'Preparing GPG for signing files without entering a password'
-        uses: ./.github/actions/setup-gpg
+        uses: fbrehm/github-setup-gpg@main
         with:
           public_key: ${{ secrets.public_key }}
           private_key: ${{ secrets.private_key }}
