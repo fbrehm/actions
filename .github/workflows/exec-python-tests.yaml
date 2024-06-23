@@ -32,6 +32,8 @@ jobs:
     name: "Defining the Python Test matrix"
     runs-on: ubuntu-latest
     container: debian:${{ inputs.latest_debian_version }}
+    env:
+      PYTHON_VERSIONS: ${{ inputs.test_python_versions }}
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
@@ -57,7 +59,7 @@ jobs:
             exit 5
           fi
 
-          matrix_json="{\"python_version\": ${{ inputs.test_python_versions }} }"
+          matrix_json="{\"python_version\": ${PYTHON_VERSIONS} }"
 
           echo -e "\nGenerated JSON:"
           echo "${matrix_json}" | jq -C .
