@@ -32,9 +32,6 @@ jobs:
     name: "Defining the Python Test matrix"
     runs-on: ubuntu-latest
     container: debian:${{ inputs.latest_debian_version }}
-    env:
-      LANGS: ${{ inputs.languages }}
-      PYTHON_VERSIONS: ${{ inputs.test_python_versions }}
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
@@ -55,16 +52,12 @@ jobs:
         id: set-matrix
         shell: bash
         run: |
-          if [[ -z "${LANGS}" ]] ; then
-            echo "::error::No languages given for creating the Python test matrix"
-            exit 5
-          fi
-          if [[ -z "${PYTHON_VERSIONS}" ]] ; then
+          if [[ -z "${{ inputs.test_python_versions }}" ]] ; then
             echo "::error::No Python versions given for creating the Python test matrix"
             exit 5
           fi
 
-          matrix_json="{\"language\": ${LANGS}, \"python_version\": ${PYTHON_VERSIONS}}"
+          matrix_json="{\"python_version\": ${{ inputs.test_python_versions }} }"
 
           echo -e "\nGenerated JSON:"
           echo "${matrix_json}" | jq -C .
@@ -80,7 +73,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.define-test-matrix.outputs.matrix) }}
-      max-parallel: 5
     container: python:${{ matrix.python_version }}
     env:
       LANG: ${{ matrix.language }}
@@ -100,7 +92,6 @@ jobs:
         uses: fbrehm/prepare-debian-container@main
         with:
           manage_locales: ${{ github.event.inputs.has_i18n }}
-          additional_locales: ${{ matrix.language }}
       - name: "Installing PIP modules and linter tools"
         uses: fbrehm/github-install-pip-modules@main
         with:
