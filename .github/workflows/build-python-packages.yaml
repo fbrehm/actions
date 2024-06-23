@@ -172,7 +172,6 @@ jobs:
     uses: ./.github/workflows/exec-python-tests.yaml
     with:
       has_i18n: ${{ inputs.has_i18n }}
-      languages: ${{ inputs.languages }}
       test_python_versions: ${{ inputs.test_python_versions }}
       latest_debian_version: ${{ inputs.latest_debian_version }}
 
