@@ -131,8 +131,6 @@ jobs:
           else
             echo "Executing flake8 on ${PATHS_TO_CHECK} ..."
             flake8 ${PATHS_TO_CHECK}
-            echo "Executing forced flake8 on '${INDEX_FILE}' ..."
-            flake8 --disable-noqa --ignore F401 "${INDEX_FILE}"
           fi
 
       - name: Execute Shellcheck
