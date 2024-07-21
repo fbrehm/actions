@@ -34,7 +34,7 @@ on:
       el_versions:
         description: 'Whitespace separated list of Enterprise Linux versions to build the package for.'
         type: string
-        default: 'el-8 el-9'
+        default: 'el-7 el-8 el-9'
       additional_rpm_build_packages:
         description: "A withespace separated list of packages additional to the base build packages"
         type: string
@@ -139,6 +139,23 @@ jobs:
             el_version_lc=$( echo "${el_version}" | tr '[:upper:]' '[:lower:]' )
             echo "::debug::Performing Enterprise Linux version '${el_version}' -> '${el_version_lc}'"
             case "${el_version_lc}" in
+              el-7|el7)
+                if [[ "${first_distro}" != 'y' ]] ; then
+                  matrix_json+=", "
+                fi
+                matrix_json+="{"
+                matrix_json+="\"title\": \"Oracle Linux 7\", "
+                matrix_json+="\"el_version\": \"7\", "
+                matrix_json+="\"py_minor_version\": \"6\", "
+                matrix_json+="\"py_version_dot\": \"3.6\", "
+                matrix_json+="\"py_version_nodot\": \"36\", "
+                matrix_json+="\"container\": \"oraclelinux:7\", "
+                matrix_json+="\"has_powertools\": \"true\", "
+                matrix_json+="\"dnf\": \"yum\", "
+                matrix_json+="\"epel_package\": \"epel-release\""
+                matrix_json+="}"
+                echo "::notice title=Define RPM build matrix::Adding Enterprise Linux 8"
+                ;;
               el-8|el8)
                 if [[ "${first_distro}" != 'y' ]] ; then
                   matrix_json+=", "
@@ -151,6 +168,7 @@ jobs:
                 matrix_json+="\"py_version_nodot\": \"38\", "
                 matrix_json+="\"container\": \"rockylinux:8\", "
                 matrix_json+="\"has_powertools\": \"true\", "
+                matrix_json+="\"dnf\": \"dnf\", "
                 matrix_json+="\"epel_package\": \"epel-release\""
                 matrix_json+="}"
                 echo "::notice title=Define RPM build matrix::Adding Enterprise Linux 8"
@@ -167,6 +185,7 @@ jobs:
                 matrix_json+="\"py_version_nodot\": \"3\", "
                 matrix_json+="\"container\": \"rockylinux:9\", "
                 matrix_json+="\"has_powertools\": \"false\", "
+                matrix_json+="\"dnf\": \"dnf\", "
                 matrix_json+="\"epel_package\": \"epel-release\""
                 matrix_json+="}"
                 echo "::notice title=Define RPM build matrix::Adding Enterprise Linux 9"
@@ -219,6 +238,7 @@ jobs:
           export PKG_BUILD_VERSION="${PKG_VERSION}-${PKG_RELEASE}"
           export OS_TITLE=$( cat /etc/os-release | grep '^PRETTY_NAME=' | sed -e 's/^PRETTY_NAME=//' -e 's/"//g' )
           export TZ="${{ inputs.timezone }}"
+          export EL_VERSION="${{ matrix.el_version }}"
           export RPM_SRC_DIR_BASE="${PYTHON}_${PKG_NAME}-${PKG_VERSION}"
           export RPM_SRC_DIR="rpmdir/SOURCES/${RPM_SRC_DIR_BASE}"
           export SPECFILE="${PKG_NAME}.spec"
@@ -247,20 +267,33 @@ jobs:
           echo -e "\nAll locales:"
           locale -a
           echo -e "\nInstalling locales ..."
-          langpacks='langpacks-en'
-          echo " * en"
-          if [[ -n "${ADDITIONAL_LOCALES}" ]] ; then
-              for my_lc in "${ADDITIONAL_LOCALES}" ; do
-                  base_lang=$( echo "${my_lc}" | sed -e 's/\..*//'  -e 's/_.*//' )
-                  echo " * ${base_lang}"
-                  langpack="langpacks-${base_lang}"
-                  langpacks+=" ${langpack}"
+          if [[ "${EL_VERSION}" == "7" ]] ; then
+              echo "Using locale: '${USED_LC}'"
+              localedef --charmap UTF-8 --inputfile "${USED_LOCALE}" "${USED_LC}"
+              for my_locale in de_DE en_US ; do
+                  if [[ "${my_locale}" == "${USED_LOCALE}" ]] ; then
+                      continue
+                  fi
+                  my_lc="${my_locale}.${USED_CHARSET}"
+                  echo "Installing character set '${my_lc}' ..."
+                  localedef --charmap UTF-8 --inputfile "${my_locale}" "${my_lc}"
               done
+          else
+              langpacks='langpacks-en'
+              echo " * en"
+              if [[ -n "${ADDITIONAL_LOCALES}" ]] ; then
+                  for my_lc in "${ADDITIONAL_LOCALES}" ; do
+                      base_lang=$( echo "${my_lc}" | sed -e 's/\..*//'  -e 's/_.*//' )
+                      echo " * ${base_lang}"
+                      langpack="langpacks-${base_lang}"
+                      langpacks+=" ${langpack}"
+                  done
+              fi
+              echo -e "\nInstalling language packs ${langpacks}"
+              cmd="${{ matrix.dnf }} ${DNF_ENABLE_REPO} --assumeyes install glibc-all-langpacks ${langpacks}"
+              echo -e "\nCalling: ${cmd}"
+              eval ${cmd}
           fi
-          echo -e "\nInstalling language packs ${langpacks}"
-          cmd="dnf ${DNF_ENABLE_REPO} --assumeyes install glibc-all-langpacks ${langpacks}"
-          echo -e "\nCalling: ${cmd}"
-          eval ${cmd}
           echo -e "\nAll locales:"
           locale -a
           echo -e "\nCurrent locales:"
@@ -323,35 +356,35 @@ jobs:
         shell: bash
         run: |
           echo -e "All current installed YUM repo definitions:"
-          dnf ${DNF_ENABLE_REPO} repolist --all
+          ${{ matrix.dnf }} ${DNF_ENABLE_REPO} repolist --all
 
       - name: "Install EPEL repo"
         shell: bash
-        run: dnf ${DNF_ENABLE_REPO} --assumeyes install "${{ matrix.epel_package }}"
+        run: ${{ matrix.dnf }} ${DNF_ENABLE_REPO} --assumeyes install "${{ matrix.epel_package }}"
 
       - name: "Upgrade all packages"
         shell: bash
         env:
           LC_ALL: "en_US.utf8"
         run: |
-          echo -e "\nCleaning dnf ..."
-          dnf clean all
+          echo -e "\nCleaning ${{ matrix.dnf }} ..."
+          ${{ matrix.dnf }} clean all
 
-          echo -e "\ndnf makecache ..."
-          dnf makecache
+          echo -e "\n${{ matrix.dnf }} makecache ..."
+          ${{ matrix.dnf }} makecache
 
           echo -e "\nUpgrading all packages"
-          dnf ${DNF_ENABLE_REPO} --assumeyes upgrade
+          ${{ matrix.dnf }} ${DNF_ENABLE_REPO} --assumeyes upgrade
 
       - name: 'Install TZdata'
         shell: bash
         run: |
           if rpm -qa | grep '^tzdata-' >/dev/null ; then
             echo -e "\nReinstalling tzdata ..."
-            dnf ${DNF_ENABLE_REPO} --assumeyes reinstall tzdata || true
+            ${{ matrix.dnf }} ${DNF_ENABLE_REPO} --assumeyes reinstall tzdata || true
           else
             echo -e "\nInstalling tzdata ..."
-            dnf ${DNF_ENABLE_REPO} --assumeyes install tzdata || true
+            ${{ matrix.dnf }} ${DNF_ENABLE_REPO} --assumeyes install tzdata || true
           fi
           echo -e "\nFile /usr/share/zoneinfo/zone.tab:"
           ls -l --color=always /usr/share/zoneinfo/zone.tab
@@ -361,7 +394,7 @@ jobs:
         run: |
           echo "Installing Python ${{ matrix.py_version_nodot}} ..."
 
-          cmd="dnf ${DNF_ENABLE_REPO} --assumeyes install ${PYTHON}"
+          cmd="${{ matrix.dnf }} ${DNF_ENABLE_REPO} --assumeyes install ${PYTHON}"
           cmd+=" ${PYTHON}-setuptools ${PYTHON}-pip ${PYTHON}-devel ${PYTHON}-babel"
           cmd+=" ${PYTHON}-pytz ${PYTHON}-chardet ${PYTHON}-six"
 
@@ -382,7 +415,7 @@ jobs:
         run: |
           echo "Installing build tools"
 
-          cmd="dnf ${DNF_ENABLE_REPO} --assumeyes install gnupg2 rpm-build rpm-sign gettext help2man"
+          cmd="${{ matrix.dnf }} ${DNF_ENABLE_REPO} --assumeyes install gnupg2 rpm-build rpm-sign gettext help2man"
           echo -e "\nCalling: ${cmd}"
           eval ${cmd}
 
@@ -402,7 +435,7 @@ jobs:
               fi
           done
 
-          cmd="dnf ${DNF_ENABLE_REPO} --assumeyes install ${pkgs}"
+          cmd="${{ matrix.dnf }} ${DNF_ENABLE_REPO} --assumeyes install ${pkgs}"
           echo -e "\nCalling: ${cmd}"
           eval ${cmd}
 
@@ -480,6 +513,9 @@ jobs:
                                   -e "s/@@@py_version_nodot@@@/${{ matrix.py_version_nodot }}/gi" \
                                   -e "s/@@@py_version_dot@@@/${{ matrix.py_version_dot }}/gi" \
                                   > "${SPECFILE}"
+          if [[ "${EL_VERSION}" -lt "8" ]] ; then
+              sed -i '/^Recommends/d' "${SPECFILE}"
+          fi
 
           echo -e "Converting debian/changelog into RPM changelog format and appending it to ${SPECFILE}."
           dch2speclog=dch2speclog
