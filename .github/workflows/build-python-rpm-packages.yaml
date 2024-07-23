@@ -132,6 +132,7 @@ jobs:
             echo "::error::No Enterprise Linux versions given for building packages."
             exit 5
           fi
+          echo "Using Enterprise Linux versions: ${EL_VERSIONS}"
           matrix_json='{"include": ['
           first_distro='y'
 

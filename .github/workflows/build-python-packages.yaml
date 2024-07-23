@@ -63,7 +63,7 @@ on:
       el_versions:
         description: 'Whitespace separated list of Enterprise Linux versions to build the package for.'
         type: string
-        default: 'el-8 el-9'
+        default: 'el-7 el-8 el-9'
       additional_debian_build_packages:
         description: "A withespace separated list of Debian packages additional to the base build packages"
         type: string
