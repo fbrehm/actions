@@ -25,7 +25,7 @@ jobs:
   ###########################
   deploy_to_pypi:
     runs-on: ubuntu-latest
-    name: "Deployment of the Python package to PyPi"
+    name: "Deploy Python pkg to PyPi"
     container: python:${{ inputs.latest_python_version }}
     env:
       PYPI_TOKEN_GIVEN: ${{ secrets.pypi_token && 'given' || 'NOT given' }}

@@ -59,7 +59,7 @@ jobs:
   ###########################
   deploy_to_repo:
     runs-on: ubuntu-latest
-    name: "Deployment of all Packages to Frank Brehms repo server"
+    name: "Deploy of all Pkgs to Frank Brehms repo server"
     if: ${{ github.ref_type == 'tag' }}
     steps:
 
