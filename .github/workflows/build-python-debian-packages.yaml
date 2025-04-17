@@ -195,7 +195,7 @@ jobs:
                   matrix_json+=", "
                 fi
                 matrix_json+="{"
-                matrix_json+="\"title\": \"Ubuntu 22.04 Noble Numbat\", "
+                matrix_json+="\"title\": \"Ubuntu 24.04 Noble Numbat\", "
                 matrix_json+="\"distributor\": \"Ubuntu\", "
                 matrix_json+="\"os_codename\": \"noble\", "
                 matrix_json+="\"os_release\": \"24.04\", "
