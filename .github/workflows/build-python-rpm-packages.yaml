@@ -102,7 +102,7 @@ jobs:
 
   ###########################
   define-rpm-build-matrix:
-    name: "Defining the Matrix for building RPM packages"
+    name: "Define RPM build Matrix"
     runs-on: ubuntu-latest
     if: ${{ github.ref_name == 'main' || github.ref_name == 'master' || startsWith(github.ref_name, 'test') || github.ref_name == 'dev/workflow' || startsWith(github.ref, 'refs/tags/')  }}
     container: debian:${{ inputs.latest_debian_version }}
@@ -190,7 +190,7 @@ jobs:
   ###########################
   build-rpm:
     runs-on: ubuntu-latest
-    name: Build RPM packages for EL ${{ matrix.el_version }}
+    name: "Build RPM pkgs for EL ${{ matrix.el_version }}"
     if: ${{ github.ref_name == 'main' || github.ref_name == 'master' || startsWith(github.ref_name, 'test') || github.ref_name == 'dev/workflow' || startsWith(github.ref, 'refs/tags/')  }}
     needs:
       - define-rpm-build-matrix
