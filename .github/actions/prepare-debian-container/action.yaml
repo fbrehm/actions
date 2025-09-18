@@ -1,0 +1,110 @@
+---
+name: Preparing a Debian-like image
+author: Frank Brehm
+description: Preparing a Debian-like image for doing stuff like Python tests or linting
+
+inputs:
+  manage_locales:
+    description: Should locales be installed and updated on this image
+    required: false
+    default: true
+    type: boolean
+  additional_locales:
+    description: A whitespace separated list of additional locales (except en_US.UTF-8)
+    required: false
+    default: 'de_DE.UTF-8'
+
+runs:
+  using: "composite"
+  steps:
+    - name: "Update all packages"
+      id: apt-update
+      shell: bash
+      run: |
+        echo "Apt update ..."
+        apt update --yes
+        echo "::group::Apt list upgradeable ..."
+        apt list --upgradeable
+        echo "<-- EOF"
+        echo "::group::APT dist-upgrade ..."
+        apt dist-upgrade --yes
+        echo "::endgroup::"
+
+    - name: "Install sudo, locales and gettext"
+      id: install-gettext
+      shell: bash
+      run: |
+        echo "::group::APT install sudo"
+        apt install --yes sudo
+        echo "::endgroup::"
+        if [[ "${{ inputs.manage_locales }}" == false ]] ; then
+            echo "Installing of locales is not necessary."
+        else
+            echo "::group::APT install locales and gettext"
+            apt install --yes locales gettext
+            echo "::endgroup::"
+        fi
+
+    - name: Update Locales
+      id: update-locales
+      shell: bash
+      run: |
+        echo "Update locales ..."
+        echo "::group::Current available locales:"
+        locale -a
+        echo "<-- EOF"
+        echo "::endgroup::"
+
+        if [[ "${{ inputs.manage_locales }}" == false ]] ; then
+            echo "Installing of locales is not necessary."
+        else
+            if test -f /etc/locale.gen; then
+                echo '.'
+                echo "Current /etc/locale.gen:"
+                grep -P -v '^\s*(#.*)?$' /etc/locale.gen || true; echo "<-- EOF"
+            fi
+
+            echo '.'
+            for add_locale in 'en_US.UTF-8' ${{ inputs.additional_locales }} ; do
+                echo "Ensuring locale '${add_locale}' ..."
+                charset=$( echo "${add_locale}" | sed -e 's/^[^\.]*\.//' )
+                if [[ -z "${charset}" ]] ; then
+                      charset="UTF-8"
+                fi
+
+                if grep "${add_locale}" /etc/locale.gen; then
+                    if grep -P "^\\s*${add_locale}" ; then
+                        echo "Locale '${add_locale}' already included."
+                    else
+                        echo "Enabling locale '${add_locale}' ..."
+                        sed -i -e "s/#[ 	]*${add_locale}[ 	].*/${add_locale} ${charset}/" /etc/locale.gen
+                    fi
+                else
+                    echo "Adding locale '${add_locale}' ..."
+                    echo "${add_locale} ${charset}" >> /etc/locale.gen
+                fi
+            done
+
+            echo "Managed /etc/locale.gen:"
+            grep -P -v '^\s*(#.*)?$' /etc/locale.gen || true; echo "<-- EOF"
+
+            echo "Generating locales ..."
+            locale-gen
+
+            echo "::group::New locales:"
+            locale -a
+            echo "<-- EOF"
+            echo "::endgroup::"
+
+    - name: Install and execute lsb-release
+      shell: bash
+      run: |
+        echo "."
+        echo "::group::Installing lsb-release"
+        apt install --yes lsb-release || true
+        echo "::endgroup::"
+        echo "."
+        echo "LSB-Release:"
+        lsb_release -a
+
+# vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list

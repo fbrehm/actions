@@ -89,10 +89,10 @@ jobs:
           echo -e "."
           echo "::notice::Testing Python version: $( python --version )"
 
-      # - name: "Preparing the Debian container"
-      #   uses: fbrehm/prepare-debian-container@main
-      #   with:
-      #     manage_locales: ${{ github.event.inputs.has_i18n }}
+      - name: "Preparing the Debian container"
+        uses: ./.github/actions/prepare-debian-container
+        with:
+          manage_locales: ${{ github.event.inputs.has_i18n }}
 
       # - name: "Installing PIP modules and linter tools"
       #   uses: fbrehm/github-install-pip-modules@main
