@@ -90,11 +90,6 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJSON(needs.define-test-matrix.outputs.matrix) }}
     container: python:${{ matrix.python_version }}
-    # env:
-    #   LANG: ${{ matrix.locale }}
-    #   LANGUAGE: ${{ matrix.locale }}
-    #   LC_ALL: ${{ matrix.locale }}
-    #   HAS_I18N: ${{ inputs.has_i18n }}
     steps:
       - name: "Checking out sources."
         uses: actions/checkout@v5
@@ -108,10 +103,10 @@ jobs:
           echo -e "."
           echo "::notice::Testing Python version: $( python --version ) and locale '${{ matrix.locale }}'"
 
-      - name: "Preparing the Debian container"
+      - name: "Preparing the Debian container for locale '${{ matrix.locale }}'"
         uses: ./.github/actions/prepare-debian-container
         with:
-          additional_locale: ${{ matrix.locale }}
+          install_locale: ${{ matrix.locale }}
 
       # - name: "Installing PIP modules and linter tools"
       #   uses: fbrehm/github-install-pip-modules@main
