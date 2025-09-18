@@ -1,11 +1,19 @@
 ---
-name: Preparing a Debian-like image
-author: Frank Brehm
-description: Preparing a Debian-like image for doing stuff like Python tests or linting
+name: 'Preparing a Debian-like image'
+author: 'Frank Brehm'
+description: 'Preparing a Debian-like image for doing stuff like Python tests or linting'
 
 inputs:
   install_locale:
-    description: "A locale description, which should be installed additional to en_US.UTF-8."
+    description: A locale description, which should be installed additional to en_US.UTF-8.
+    required: false
+    default: 'de_DE.UTF-8'
+  manage_locales:
+    description: Should locales be installed and updated on this image
+    required: false
+    default: true
+  additional_locales:
+    description: A whitespace separated list of additional locales (except en_US.UTF-8)
     required: false
     default: 'de_DE.UTF-8'
 
