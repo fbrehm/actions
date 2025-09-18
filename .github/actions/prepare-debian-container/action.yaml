@@ -4,7 +4,7 @@ author: Frank Brehm
 description: Preparing a Debian-like image for doing stuff like Python tests or linting
 
 inputs:
-  locale:
+  additional_locale:
     description: "A locale description, which should be installed additional to en_US.UTF-8."
     required: false
     default: 'de_DE.UTF-8'
@@ -39,7 +39,7 @@ runs:
     - name: Update Locales
       id: update-locales
       env:
-        MY_LOCALE: ${{ inputs.locale }}
+        MY_LOCALE: ${{ inputs.additional_locale }}
       shell: bash
       run: |
         echo "Update locales ..."

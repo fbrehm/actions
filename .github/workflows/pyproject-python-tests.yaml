@@ -111,7 +111,7 @@ jobs:
       - name: "Preparing the Debian container"
         uses: ./.github/actions/prepare-debian-container
         with:
-          locale: ${{ matrix.locale }}
+          additional_locale: ${{ matrix.locale }}
 
       # - name: "Installing PIP modules and linter tools"
       #   uses: fbrehm/github-install-pip-modules@main
