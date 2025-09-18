@@ -19,6 +19,10 @@ on:
         description: 'The short name of the latest stable Debian version.'
         type: string
         default: 'bookworm'
+      additional_locales:
+        description: 'A whitespace separated list of additional locales (except en_US.UTF-8)'
+        type: string
+        default: 'de_DE.UTF-8'
 
 ################################################################################
 jobs:
@@ -30,6 +34,7 @@ jobs:
     container: debian:${{ inputs.latest_debian_version }}
     env:
       PYTHON_VERSIONS: ${{ inputs.test_python_versions }}
+      ADDITIONAL_LOCALES: ${{ inputs.additional_locales }}
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
@@ -55,7 +60,17 @@ jobs:
             exit 5
           fi
 
-          matrix_json="{\"python_version\": ${PYTHON_VERSIONS} }"
+          TEST_LOCALES='["en_US.utf8"'
+          if [[ -n "${ADDITIONAL_LOCALES}" ]] ; then
+              for locale in ${ADDITIONAL_LOCALES} ; do
+                  TEST_LOCALES+=", \"${locale}\""
+              done
+          fi
+
+          matrix_json="{"
+          matrix_json+="\"python_version\": ${PYTHON_VERSIONS}, "
+          matrix_json+="\"locale\": ${TEST_LOCALES}"
+          matrix_json+="}"
 
           echo -e "\nGenerated JSON:"
           echo "${matrix_json}" | jq -C .
@@ -73,9 +88,10 @@ jobs:
       matrix: ${{ fromJSON(needs.define-test-matrix.outputs.matrix) }}
     container: python:${{ matrix.python_version }}
     env:
-      LANG: ${{ matrix.language }}
-      LANGUAGE: ${{ matrix.language }}
-      LC_ALL: ${{ matrix.language }}
+      LANG: ${{ matrix.locale }}
+      LANGUAGE: ${{ matrix.locale }}
+      LC_ALL: ${{ matrix.locale }}
+      HAS_I18N: ${{ inputs.has_i18n }}
     steps:
       - name: "Checking out sources."
         uses: actions/checkout@v5
@@ -87,12 +103,12 @@ jobs:
           env | sort
           echo "::endgroup::"
           echo -e "."
-          echo "::notice::Testing Python version: $( python --version )"
+          echo "::notice::Testing Python version: $( python --version ) and locale '${{ matrix.locale }}'"
 
       - name: "Preparing the Debian container"
         uses: ./.github/actions/prepare-debian-container
         with:
-          has_i18: ${{ inputs.has_i18n }}
+          locale: ${{ matrix.locale }}
 
       # - name: "Installing PIP modules and linter tools"
       #   uses: fbrehm/github-install-pip-modules@main

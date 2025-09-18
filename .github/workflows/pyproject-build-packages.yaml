@@ -202,6 +202,7 @@ jobs:
     needs: check-src
     with:
       has_i18n: ${{ inputs.has_i18n }}
+      additional_locales: ${{ inputs.additional_locales }}
       test_python_versions: ${{ inputs.test_python_versions }}
       latest_debian_version: ${{ inputs.latest_debian_version }}
 
