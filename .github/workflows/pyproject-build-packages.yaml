@@ -129,6 +129,10 @@ on:
         description: 'Recipients mail addresses (separated with comma)'
         type: string
         default: 'frank@brehm-online.com,frank.brehm@pixelpark.com'
+      revision:
+        description: "Revision count for current version."
+        type: string
+        default: '1'
     secrets:
       pypi_token:
         description: "The token to use for transmitting the package to PyPi"
@@ -195,6 +199,7 @@ jobs:
   exec-pytest:
     name: "Execute Python tests"
     uses: ./.github/workflows/pyproject-python-tests.yaml
+    needs: check-src
     with:
       has_i18n: ${{ inputs.has_i18n }}
       test_python_versions: ${{ inputs.test_python_versions }}
