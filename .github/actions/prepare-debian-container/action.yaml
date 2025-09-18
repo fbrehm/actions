@@ -4,8 +4,8 @@ author: Frank Brehm
 description: Preparing a Debian-like image for doing stuff like Python tests or linting
 
 inputs:
-  manage_locales:
-    description: Should locales be installed and updated on this image
+  has_i18n:
+    description: 'Does the package support localisation and internationalisation?'
     required: false
     default: true
     type: boolean
@@ -37,7 +37,7 @@ runs:
         echo "::group::APT install sudo"
         apt install --yes sudo
         echo "::endgroup::"
-        if [[ "${{ inputs.manage_locales }}" == false ]] ; then
+        if [[ "${{ inputs.has_i18n }}" == false ]] ; then
             echo "Installing of locales is not necessary."
         else
             echo "::group::APT install locales and gettext"
@@ -55,7 +55,7 @@ runs:
         echo "<-- EOF"
         echo "::endgroup::"
 
-        if [[ "${{ inputs.manage_locales }}" == false ]] ; then
+        if [[ "${{ has_i18n.manage_locales }}" == false ]] ; then
             echo "Installing of locales is not necessary."
         else
             if test -f /etc/locale.gen; then
