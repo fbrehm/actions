@@ -66,11 +66,14 @@ jobs:
                   TEST_LOCALES+=", \"${locale}\""
               done
           fi
+          TEST_LOCALES+="]"
 
           matrix_json="{"
           matrix_json+="\"python_version\": ${PYTHON_VERSIONS}, "
           matrix_json+="\"locale\": ${TEST_LOCALES}"
           matrix_json+="}"
+
+          echo -e "\nGenerated raw JSON: ${matrix_json}"
 
           echo -e "\nGenerated JSON:"
           echo "${matrix_json}" | jq -C .
