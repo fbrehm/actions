@@ -161,7 +161,7 @@ runs:
       id: get-entrypoints
       shell: bash
       run: |
-        awk_file_keys="${{ steps.vars.outputs.awk_file_keys }}"
+        awk_file_keys="${{ steps.create-awk-script-keys.outputs.awk_file_keys }}"
 
         echo -e "Get all entry points ..."
         ENTRYPOINTS=''
@@ -192,7 +192,7 @@ runs:
       id: check-for-flit
       shell: bash
       run: |
-        awk_file_value="${{ steps.vars.outputs.awk_file_value }}"
+        awk_file_value="${{ steps.create-awk-script-values.outputs.awk_file_value }}"
         target_build_backend='flit_core.buildapi'
 
         echo "Get name of the build system."
