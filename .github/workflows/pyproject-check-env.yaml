@@ -8,7 +8,8 @@ on:
   workflow_call:
     inputs:
       srcdir:
-        description: "The sorce directoryi for Python modules."
+        description: "The source directory for Python modules."
+        type: string
         required: false
         default: 'src'
       latest_debian_version:
