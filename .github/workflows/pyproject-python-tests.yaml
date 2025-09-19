@@ -109,13 +109,16 @@ jobs:
           manage_locales: ${{ inputs.has_i18n }}
           additional_locales: '${{ matrix.locale }}'
 
-      # - name: "Installing PIP modules and linter tools"
-      #   uses: fbrehm/github-install-pip-modules@main
-      #   with:
-      #     install_pytest: true
+      - name: "Installing PIP modules and linter tools"
+        uses: ./.github/actions/pyproject-install-pip-modules
+        with:
+          install_pytest: true
 
-      # - name: Executing PyTest for Python ${{ matrix.python_version }} and language ${{ matrix.language }}
-      #   shell: bash
-      #   run: pytest --verbose
+      - name: Executing PyTest for Python ${{ matrix.python_version }} and locale ${{ matrix.locale }}
+        shell: bash
+        run: |
+          echo "Executing pytest:"
+          source .venv/bin/activate
+          pytest --verbose
 
 # vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list
