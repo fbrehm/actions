@@ -118,7 +118,7 @@ jobs:
           echo "::notice::Testing Python version: $( python --version ) and locale '${{ matrix.locale }}'"
 
       - name: "Preparing the Debian container for locale '${{ matrix.locale }}'"
-        uses: fbrehm/actions/.github/actions/prepare-debian-container@develop@develop
+        uses: fbrehm/actions/.github/actions/prepare-debian-container@develop
         with:
           manage_locales: ${{ inputs.has_i18n }}
           additional_locales: '${{ matrix.locale }}'
