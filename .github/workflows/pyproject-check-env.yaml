@@ -1,7 +1,6 @@
 ---
+
 name: 'Checking the pyproject and flit environment'
-author: 'Frank Brehm'
-description: 'Checking the current environment for validity for pyproject with flint.'
 
 ################################################################################
 # yamllint disable-line rule:truthy
