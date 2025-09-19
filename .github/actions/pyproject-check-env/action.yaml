@@ -3,6 +3,12 @@ name: Checking the pyproject and flit environment
 author: Frank Brehm
 description: Checking the current environment for validity for pyproject with flint.
 
+inputs:
+  srcdir:
+    description: "The sorce directoryi for Python modules."
+    required: false
+    default: 'src'
+
 runs:
   using: "composite"
   steps:
@@ -26,18 +32,6 @@ runs:
             exit 6
         fi
         echo "Found Source directory '${{ inputs.srcdir }}'."
-
-    - name: "Install JQ"
-      shell: bash
-      run: |
-        if type -p jq >/dev/null; then
-            echo "The package jq is already installed."
-        else
-            echo "::group::Installing package 'jq' ..."
-            apt install --yes jq
-            echo "::endgroup::"
-            echo -e "Version of JQ: $( jq --version )"
-        fi
 
     - name: "Create AWK script for get all keys in a section."
       shell: bash

@@ -19,15 +19,6 @@ inputs:
     required: false
     default: false
     type: boolean
-  ensure_data:
-    description: 'Ensures the existence of the data directory.'
-    required: false
-    default: true
-    type: boolean
-  data_directory:
-    description: "The data directory, for man pages, locales a.s.o."
-    required: false
-    default: 'data'
 
 runs:
   using: "composite"
