@@ -37,6 +37,9 @@ runs:
       shell: bash
       id: create-awk-script-keys
       run: |
+        echo "Version of awk:"
+        awk --version
+
         echo "Creating AWK script ..."
         lines=$( cat <<-EOF
         	BEGIN {
@@ -165,7 +168,7 @@ runs:
 
         echo -e "Get all entry points ..."
         ENTRYPOINTS=''
-        cmd="awk -f '${awk_file_keys}' --assign target_section=project.scripts pyproject.toml"
+        cmd="awk -f '${awk_file_keys}' -v target_section=project.scripts pyproject.toml"
         echo "::debug::Calling ${cmd}"
         result=$( eval ${cmd} )
         echo "Got raw entrypoints from AWK script: '${result}'"
@@ -197,7 +200,7 @@ runs:
 
         echo "Get name of the build system."
 
-        cmd="awk -f '${awk_file_value}' --assign target_section=build-system --assign key=build-backend pyproject.toml"
+        cmd="awk -f '${awk_file_value}' -v target_section=build-system --assign key=build-backend pyproject.toml"
         echo "::debug::Calling ${cmd}"
         build_system=$( eval ${cmd} )
         echo "Got build system from AWK script: '${build_system}'"
