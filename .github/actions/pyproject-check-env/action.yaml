@@ -106,8 +106,8 @@ runs:
 
         	{
         	  # Strip leading and trailing white spaces
-        	  line = $0
-        	  gsub(/^[ \t]+|[ \t]+$/, "", line)
+        	  line = \$0
+        	  gsub(/^[ \t]+|[ \t]+\$/, "", line)
 
         	  # Step comments and empty rows
         	  if (line ~ /^;/ || line ~ /^#/) {
@@ -118,7 +118,7 @@ runs:
         	  }
 
         	  # Check for the correct section
-        	  if (line ~ /^\[.*\]$/) {
+        	  if (line ~ /^\[.*\]\$/) {
         	    section = substr(line, 2, length(line) - 2)
         	    if (section == target_section) {
         	      found_section = 1
@@ -135,8 +135,8 @@ runs:
 
         	      value = arr[2]
 
-        	      gsub(/^"|"$/, "", value)
-        	      gsub(/^'|'$/, "", value)
+        	      gsub(/^"|"\$/, "", value)
+        	      gsub(/^'|'\$/, "", value)
 
         	      print value
 
@@ -166,7 +166,7 @@ runs:
         echo -e "Get all entry points ..."
         ENTRYPOINTS=''
         cmd="awk -f '${awk_file_keys}' -v target_section=project.scripts pyproject.toml"
-        echo "::debug::Calling ${cmd}"
+        echo "Calling ${cmd}"
         result=$( eval ${cmd} )
         echo "Got raw entrypoints from AWK script: '${result}'"
 
@@ -198,7 +198,7 @@ runs:
         echo "Get name of the build system."
 
         cmd="awk -f '${awk_file_value}' -v target_section=build-system -v key=build-backend pyproject.toml"
-        echo "::debug::Calling ${cmd}"
+        echo "Calling ${cmd}"
         build_system=$( eval ${cmd} )
         echo "Got build system from AWK script: '${build_system}'"
 
@@ -220,7 +220,7 @@ runs:
         DATA_DIR=''
 
         cmd="awk -f '${awk_file_value}' -v target_section=tool.flit.external-data -v key=directory pyproject.toml"
-        echo "::debug::Calling ${cmd}"
+        echo "Calling ${cmd}"
         DATA_DIR=$( eval ${cmd} )
 
         echo "DATA_DIR=\"${DATA_DIR}\"" >>"$GITHUB_ENV"
