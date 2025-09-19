@@ -110,7 +110,7 @@ jobs:
           additional_locales: '${{ matrix.locale }}'
 
       - name: "Installing PIP modules and linter tools"
-        uses: ./.github/actions/pyproject-install-pip-modules
+        uses: fbrehm/actions/.github/actions/pyproject-install-pip-modules@develop
         with:
           install_pytest: true
 
