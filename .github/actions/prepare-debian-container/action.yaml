@@ -8,14 +8,14 @@ inputs:
     description: A locale description, which should be installed additional to en_US.UTF-8.
     required: false
     default: 'de_DE.UTF-8'
-  manage_locales:
-    description: Should locales be installed and updated on this image
-    required: false
-    default: true
-  additional_locales:
-    description: A whitespace separated list of additional locales (except en_US.UTF-8)
-    required: false
-    default: 'de_DE.UTF-8'
+  # manage_locales:
+  #   description: Should locales be installed and updated on this image
+  #   required: false
+  #   default: true
+  # additional_locales:
+  #   description: A whitespace separated list of additional locales (except en_US.UTF-8)
+  #   required: false
+  #   default: 'de_DE.UTF-8'
 
 runs:
   using: "composite"
@@ -29,6 +29,7 @@ runs:
         echo "::group::Apt list upgradeable ..."
         apt list --upgradeable
         echo "<-- EOF"
+        echo "::endgroup::"
         echo "::group::APT dist-upgrade ..."
         apt dist-upgrade --yes
         echo "::endgroup::"

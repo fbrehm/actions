@@ -104,9 +104,10 @@ jobs:
           echo "::notice::Testing Python version: $( python --version ) and locale '${{ matrix.locale }}'"
 
       - name: "Preparing the Debian container for locale '${{ matrix.locale }}'"
-        uses: ./.github/actions/prepare-debian-container
+        uses: fbrehm/prepare-debian-container@develop
         with:
-          install_locale: '${{ matrix.locale }}'
+          manage_locales: ${{ inputs.has_i18n }}
+          additional_locales: '${{ matrix.locale }}'
 
       # - name: "Installing PIP modules and linter tools"
       #   uses: fbrehm/github-install-pip-modules@main
