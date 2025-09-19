@@ -96,7 +96,7 @@ runs:
 
     - name: "Create AWK script for get the value of a keys in a section."
       shell: bash
-      id: create-awk-script-keys
+      id: create-awk-script-values
       run: |
         echo "Creating AWK script ..."
         lines=$( cat <<-EOF
