@@ -48,7 +48,13 @@ jobs:
       - name: "Install JQ"
         shell: bash
         run: |
-          apt install --yes jq
+          if type -p jq >/dev/null; then
+              echo "The package jq is already installed."
+          else
+              echo "::group::Installing package 'jq' ..."
+              apt install --yes jq
+              echo "::endgroup::"
+          fi
           echo -e "Version of JQ: $( jq --version )"
 
       - name: Defining the Test-Matrix
