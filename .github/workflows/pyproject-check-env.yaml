@@ -209,7 +209,7 @@ jobs:
               done
           fi
 
-          echo "entrypoints=\"${ENTRYPOINTS}\"" >>"$GITHUB_OUTPUT"
+          echo "entrypoints=${ENTRYPOINTS}" >>"$GITHUB_OUTPUT"
 
           if [[ -n "${ENTRYPOINTS}" ]] ; then
               echo "::notice::Found entrypoints: ${ENTRYPOINTS}"
@@ -252,7 +252,7 @@ jobs:
           echo "Calling ${cmd}"
           DATA_DIR=$( eval ${cmd} )
 
-          echo "data_dir=\"${DATA_DIR}\"" >>"$GITHUB_OUTPUT"
+          echo "data_dir=${DATA_DIR}" >>"$GITHUB_OUTPUT"
 
           if [[ -n "${DATA_DIR}" ]] ; then
               echo "::notice::Found data directory: ${DATA_DIR}"
