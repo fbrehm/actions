@@ -19,6 +19,10 @@ inputs:
     required: false
     default: false
     type: boolean
+  data_dir:
+    description: "The data directory for containing man pages, i18n files a.s.o."
+    type: string
+    default: ''
 
 runs:
   using: "composite"
@@ -32,6 +36,8 @@ runs:
 
     - name: 'Ensure data directory'
       id: ensure-data-dir
+      env:
+        DATA_DIR: ${{ inputs.data_dir }}
       shell: bash
       run: |
         if [[ -n "${DATA_DIR}" ]] ; then

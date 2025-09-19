@@ -23,6 +23,14 @@ on:
         description: 'A whitespace separated list of additional locales (except en_US.UTF-8)'
         type: string
         default: 'de_DE.UTF-8'
+      entrypoints:
+        description: "A whitespace separated list of entrypoints, which are converted to executable Python scripts."
+        type: string
+        default: ''
+      data_dir:
+        description: "The data directory for containing man pages, i18n files a.s.o."
+        type: string
+        default: ''
 
 ################################################################################
 jobs:
@@ -110,7 +118,7 @@ jobs:
           echo "::notice::Testing Python version: $( python --version ) and locale '${{ matrix.locale }}'"
 
       - name: "Preparing the Debian container for locale '${{ matrix.locale }}'"
-        uses: fbrehm/prepare-debian-container@develop
+        uses: fbrehm/actions/.github/actions/prepare-debian-container@develop@develop
         with:
           manage_locales: ${{ inputs.has_i18n }}
           additional_locales: '${{ matrix.locale }}'
@@ -119,6 +127,7 @@ jobs:
         uses: fbrehm/actions/.github/actions/pyproject-install-pip-modules@develop
         with:
           install_pytest: true
+          data_dir: ${{ inputs.data_dir }}
 
       - name: Executing PyTest for Python ${{ matrix.python_version }} and locale ${{ matrix.locale }}
         shell: bash

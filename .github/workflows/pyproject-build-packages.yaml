@@ -169,14 +169,10 @@ jobs:
   ###########################
   check-src:
     name: "Checking the sources for minimal requirements."
-    runs-on: ubuntu-latest
-    container: debian:${{ inputs.latest_debian_version }}
-    steps:
-      - name: "Checking out sources."
-        uses: actions/checkout@v5
-
-      - name: 'Checking the pyproject and flit environment'
-        uses: fbrehm/actions/.github/actions/pyproject-check-env@develop
+    uses: ./.github/workflows/pyproject-check-env.yaml
+    with:
+      srcdir: 'src'
+      latest_debian_version: ${{ inputs.latest_debian_version }}
 
   ###########################
   exec-pytest:
@@ -188,6 +184,8 @@ jobs:
       additional_locales: ${{ inputs.additional_locales }}
       test_python_versions: ${{ inputs.test_python_versions }}
       latest_debian_version: ${{ inputs.latest_debian_version }}
+      entrypoints: ${{ needs.check-src.outputs.entrypoints }}
+      data_dir: ${{ needs.check-src.outputs.data_dir }}
 
   # ###########################
   # exec-python-linter:
