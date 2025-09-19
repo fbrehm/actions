@@ -39,10 +39,21 @@ runs:
         echo "Current Python version:"
         python3 --version
 
-    - name: 'Ensure data diectory'
+    - name: 'Ensure data directory'
       id: ensure-data-dir
       shell: bash
       run: |
+        if [[ -n "${DATA_DIR}" ]] ; then
+            echo "Ensuring data directory '${DATA_DIR}' ..."
+            if [[ -d "${DATA_DIR}" ]] ; then
+                echo "Data directory '${DATA_DIR}' is already existing."
+            else
+                echo "Creating data directory '${DATA_DIR}' ..."
+                mkdir -p -v "${DATA_DIR}"
+            fi
+        else
+            echo "No data directory defined."
+        fi
 
     - name: Creating Python virtual environment
       id: create-venv
