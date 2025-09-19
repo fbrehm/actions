@@ -197,7 +197,7 @@ runs:
 
         echo "Get name of the build system."
 
-        cmd="awk -f '${awk_file_value}' -v target_section=build-system --assign key=build-backend pyproject.toml"
+        cmd="awk -f '${awk_file_value}' -v target_section=build-system -v key=build-backend pyproject.toml"
         echo "::debug::Calling ${cmd}"
         build_system=$( eval ${cmd} )
         echo "Got build system from AWK script: '${build_system}'"
@@ -219,7 +219,7 @@ runs:
 
         DATA_DIR=''
 
-        cmd="awk -f '${awk_file_value}' --assign target_section=tool.flit.external-data --assign key=directory pyproject.toml"
+        cmd="awk -f '${awk_file_value}' -v target_section=tool.flit.external-data -v key=directory pyproject.toml"
         echo "::debug::Calling ${cmd}"
         DATA_DIR=$( eval ${cmd} )
 
