@@ -78,7 +78,7 @@ runs:
         	EOF
         )
 
-        awk_file_keys=$( mktemp get-all-keys-from-section.XXXXXXXXXX.awk
+        awk_file_keys=$( mktemp get-all-keys-from-section.XXXXXXXXXX.awk )
         echo "Creating AWK script: '${awk_file_keys}'."
         echo "${lines}" > "${awk_file_keys}"
 
@@ -147,7 +147,7 @@ runs:
         	EOF
         )
 
-        awk_file_value=$( mktemp get-value-from-section.XXXXXXXXXX.awk
+        awk_file_value=$( mktemp get-value-from-section.XXXXXXXXXX.awk )
         echo "Creating AWK script: '${awk_file_value}'."
         echo "${lines}" > "${awk_file_value}"
 
