@@ -98,6 +98,8 @@ runs:
       shell: bash
       id: create-awk-script-keys
       run: |
+        echo "Creating AWK script ..."
+        lines=$( cat <<-EOF
         	# Script for extracting a value from a INI-file
         	#
         	# Example for calling:
@@ -148,6 +150,8 @@ runs:
         	    }
         	  }
         	}
+        	EOF
+        )
 
         awk_file_value=$( mktemp get-value-from-section.XXXXXXXXXX.awk
         echo "Creating AWK script: '${awk_file_value}'."
