@@ -76,8 +76,6 @@ runs:
     - name: Install Python Requirements
       id: inst-requirements
       env:
-        INSTALL_PYTEST: ${{ inputs.install_pytest }}
-        INSTALL_LINTER_TOOLS: ${{ inputs.install_linter_tools }}
         FLIT_ROOT_INSTALL: 1
       shell: bash
       run: |
@@ -88,13 +86,9 @@ runs:
         pip install flit
         echo "::endgroup::"
         echo "Installing all necessary packages with flit ..."
-        if [[ "${INSTALL_LINTER_TOOLS}" == false ]] ; then
-            echo "Installation of Linter tools not necessary."
-        else
-            echo "Installing linting modules ..."
-            echo "::group::Flit install lint"
-            flit install --only-deps --deps production --extras lint --python .venv/bin/python3
-            echo "::endgroup::"
+        echo "::group::Flit --only-deps --deps production ---python .venv/bin/python3"
+        flit install --only-deps --deps production --python .venv/bin/python3
+        echo "::endgroup::"
         fi
 
     - name: Install linter tools
@@ -133,7 +127,6 @@ runs:
       if: ${{ inputs.install_pytest }}
       env:
         FLIT_ROOT_INSTALL: 1
-      id: inst-pytest
       shell: bash
       run: |
         echo "Activating virtual environment '.venv'."
