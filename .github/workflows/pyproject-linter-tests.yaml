@@ -141,12 +141,11 @@ jobs:
               PATHS_TO_CHECK+=" ${ADDITIONAL_FILES_FLAKE8}"
           fi
 
+          source .venv/bin/activate
           echo "Flake8 version:"
           flake8 --version
 
-          # echo "Executing flake8 on ${PATHS_TO_CHECK} ..."
           echo "Executing flake8 on:"; for path in ${PATHS_TO_CHECK} ; do echo " * ${path}"; done
-          source .venv/bin/activate
           flake8 ${PATHS_TO_CHECK}
 
       - name: Execute Shellcheck
