@@ -36,6 +36,10 @@ on:
         type: string
         default: "3.13"
       srcdir:
+        description: "The parent directory of the libdir."
+        type: string
+        default: 'src'
+      libdir:
         description: "The directory in the workdir where the Python modules are located."
         type: string
         required: true
@@ -171,7 +175,7 @@ jobs:
     name: "Checking the sources for minimal requirements."
     uses: ./.github/workflows/pyproject-check-env.yaml
     with:
-      srcdir: 'src'
+      srcdir: ${{ inputs.srcdir }}
       latest_debian_version: ${{ inputs.latest_debian_version }}
 
   ###########################
@@ -187,18 +191,21 @@ jobs:
       entrypoints: ${{ needs.check-src.outputs.entrypoints }}
       data_dir: ${{ needs.check-src.outputs.data_dir }}
 
-  # ###########################
-  # exec-python-linter:
-  #   name: "Exec linter checks on Python sources"
-  #   uses: ./.github/workflows/python-linter-tests.yaml
-  #   needs:
-  #     - exec-pytest
-  #   with:
-  #     latest_python_version: ${{ inputs.latest_python_version }}
-  #     libdir: ${{ inputs.libdir }}
-  #     additional_files_flake8: ${{ inputs.additional_files_flake8 }}
-  #     additional_scripts_shellcheck: ${{ inputs.additional_scripts_shellcheck }}
-  #     additional_paths_yamllint: ${{ inputs.additional_paths_yamllint }}
+  ###########################
+  exec-python-linter:
+    name: "Exec linter checks on Python sources"
+    uses: ./.github/workflows/pyproject-linter-tests.yaml
+    needs:
+      - exec-pytest
+      - check-src
+    with:
+      latest_python_version: ${{ inputs.latest_python_version }}
+      libdir: ${{ inputs.libdir }}
+      additional_files_flake8: ${{ inputs.additional_files_flake8 }}
+      additional_scripts_shellcheck: ${{ inputs.additional_scripts_shellcheck }}
+      additional_paths_yamllint: ${{ inputs.additional_paths_yamllint }}
+      entrypoints: ${{ needs.check-src.outputs.entrypoints }}
+      data_dir: ${{ needs.check-src.outputs.data_dir }}
 
   # ###########################
   # deploy-to-pypi:
