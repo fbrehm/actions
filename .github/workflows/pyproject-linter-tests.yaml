@@ -172,8 +172,7 @@ jobs:
           done
 
           echo -n "Version of shellcheck: "; shellcheck --version
-          if [[ -n "${shellscripts}" ]] ; do
-              echo "Checking with shellcheck: ${shellscripts}"
+          if [[ -n "${shellscripts}" ]] ; then
               echo "Checking with shellcheck:"
               for script in ${shellscripts} ; do
                   echo " * ${script}"
