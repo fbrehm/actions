@@ -89,7 +89,6 @@ runs:
         echo "::group::Flit --only-deps --deps production ---python .venv/bin/python3"
         flit install --only-deps --deps production --python .venv/bin/python3
         echo "::endgroup::"
-        fi
 
     - name: Install linter tools
       id: install-linter
