@@ -169,9 +169,13 @@ jobs:
           done
 
           echo -n "Version of shellcheck: "; shellcheck --version
-          echo -e "Checking with shellcheck: ${shellscripts} ..."
-          echo "shellcheck -x ${shellscripts}"
-          shellcheck -x ${shellscripts}
+          if [[ -n "${shellscripts}" ]] ; do
+              echo "Checking with shellcheck:"; for script in ${shellscripts} ; do echo " * ${script}"; done
+              echo "shellcheck -x ${shellscripts}"
+              shellcheck -x ${shellscripts}
+          else
+              echo "No shell scripts for checking found."
+          fi
 
       - name: Execute Yamllint
         shell: bash

@@ -94,46 +94,55 @@ runs:
       id: install-linter
       if: ${{ inputs.install_linter_tools }}
       env:
+        INSTALL_LINTER_TOOLS: ${{ inputs.install_linter_tools }}
         FLIT_ROOT_INSTALL: 1
       shell: bash
       run: |
-        echo "Installing shellcheck and yamllint ..."
-        if type -p apt >/dev/null; then
-            echo "::group::Executing: apt install --yes shellcheck yamllint"
-            apt install --yes shellcheck yamllint
-            echo "::endgroup::"
-        elif type -p dnf >/dev/null; then
-            echo "::group::Executing: dnf --assumeyes install ShellCheck yamllint"
-            dnf --assumeyes install ShellCheck yamllint
-            echo "::endgroup::"
-        elif type -p yum >/dev/null; then
-            echo "::group::Executing: yum --assumeyes install ShellCheck yamllint"
-            yum --assumeyes install ShellCheck yamllint
-            echo "::endgroup::"
+        if [[ "${INSTALL_LINTER_TOOLS}" == false ]] ; then
+            echo "Installation of Linter tools not necessary."
         else
-            echo "::error::Did not found apt, dnf or yum."
-            exit 5
+            echo "Installing shellcheck and yamllint ..."
+            if type -p apt >/dev/null; then
+                echo "::group::Executing: apt install --yes shellcheck yamllint"
+                apt install --yes shellcheck yamllint
+                echo "::endgroup::"
+            elif type -p dnf >/dev/null; then
+                echo "::group::Executing: dnf --assumeyes install ShellCheck yamllint"
+                dnf --assumeyes install ShellCheck yamllint
+                echo "::endgroup::"
+            elif type -p yum >/dev/null; then
+                echo "::group::Executing: yum --assumeyes install ShellCheck yamllint"
+                yum --assumeyes install ShellCheck yamllint
+                echo "::endgroup::"
+            else
+                echo "::error::Did not found apt, dnf or yum."
+                exit 5
+            fi
+            echo "Activating virtual environment '.venv'."
+            source .venv/bin/activate
+            echo "Installing linting modules with flit ..."
+            echo "::group::Flit install lint"
+            flit install --only-deps --deps production --extras lint --python .venv/bin/python3
+            echo "::endgroup::"
         fi
-        echo "Activating virtual environment '.venv'."
-        source .venv/bin/activate
-        echo "Installing linting modules with flit ..."
-        echo "::group::Flit install lint"
-        flit install --only-deps --deps production --extras lint --python .venv/bin/python3
-        echo "::endgroup::"
 
     - name: Install Pytest
       id: install-pytest
-      if: ${{ inputs.install_pytest }}
       env:
+        INSTALL_PYTEST: ${{ inputs.install_pytest }}
         FLIT_ROOT_INSTALL: 1
       shell: bash
       run: |
-        echo "Activating virtual environment '.venv'."
-        source .venv/bin/activate
-        echo "Installing test modules with flit ..."
-        echo "::group::Flit install testing"
-        flit install --only-deps --deps production --extras testing --python .venv/bin/python3
-        echo "::endgroup::"
+        if [[ "${INSTALL_PYTEST}" == false ]] ; then
+            echo "Installing testing tools not necessary."
+        else
+            echo "Activating virtual environment '.venv'."
+            source .venv/bin/activate
+            echo "Installing test modules with flit ..."
+            echo "::group::Flit install testing"
+            flit install --only-deps --deps production --extras testing --python .venv/bin/python3
+            echo "::endgroup::"
+        fi
 
     - name: Show installed Python modules
       id: show-py-modules
