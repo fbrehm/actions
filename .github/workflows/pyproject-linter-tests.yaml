@@ -145,7 +145,10 @@ jobs:
           echo "Flake8 version:"
           flake8 --version
 
-          echo "Executing flake8 on:"; for path in ${PATHS_TO_CHECK} ; do echo " * ${path}"; done
+          echo "Executing flake8 on:"
+          for path in ${PATHS_TO_CHECK} ; do
+              echo " * ${path}"
+          done
           flake8 ${PATHS_TO_CHECK}
 
       - name: Execute Shellcheck
@@ -170,7 +173,11 @@ jobs:
 
           echo -n "Version of shellcheck: "; shellcheck --version
           if [[ -n "${shellscripts}" ]] ; do
-              echo "Checking with shellcheck:"; for script in ${shellscripts} ; do echo " * ${script}"; done
+              echo "Checking with shellcheck: ${shellscripts}"
+              echo "Checking with shellcheck:"
+              for script in ${shellscripts} ; do
+                  echo " * ${script}"
+              done
               echo "shellcheck -x ${shellscripts}"
               shellcheck -x ${shellscripts}
           else
