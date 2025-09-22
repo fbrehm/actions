@@ -207,17 +207,20 @@ jobs:
       entrypoints: ${{ needs.check-src.outputs.entrypoints }}
       data_dir: ${{ needs.check-src.outputs.data_dir }}
 
-  # ###########################
-  # deploy-to-pypi:
-  #   name: "Building the Python packages and deploying it to PyPi"
-  #   uses: ./.github/workflows/deploy-to-pypi.yaml
-  #   needs:
-  #     - exec-python-linter
-  #   with:
-  #     latest_python_version: ${{ inputs.latest_python_version }}
-  #     retention_days: ${{ inputs.retention_days }}
-  #   secrets:
-  #     pypi_token: ${{ secrets.pypi_token }}
+  ###########################
+  deploy-to-pypi:
+    name: "Building the Python packages and deploying it to PyPi"
+    uses: ./.github/workflows/pyproject-deploy-pypi.yaml
+    needs:
+      - exec-python-linter
+      - check-src
+    with:
+      latest_python_version: ${{ inputs.latest_python_version }}
+      retention_days: ${{ inputs.retention_days }}
+      entrypoints: ${{ needs.check-src.outputs.entrypoints }}
+      data_dir: ${{ needs.check-src.outputs.data_dir }}
+    secrets:
+      pypi_token: ${{ secrets.pypi_token }}
 
   # ###########################
   # build-debian-packages:

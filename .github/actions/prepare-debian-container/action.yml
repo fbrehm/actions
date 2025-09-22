@@ -12,6 +12,11 @@ inputs:
     description: A whitespace separated list of additional locales (except en_US.UTF-8)
     required: false
     default: 'de_DE.UTF-8'
+  install_flit:
+    description: 'Install package "flit'"."
+    required: false
+    type: boolean
+    default: false
 
 runs:
   using: "composite"
@@ -126,12 +131,24 @@ runs:
     - name: Install and execute lsb-release
       shell: bash
       run: |
-        echo "."
         echo "::group::Installing lsb-release"
         apt install --yes lsb-release || true
         echo "::endgroup::"
-        echo "."
         echo "LSB-Release:"
         lsb_release -a
+
+    - name: 'Install flit.'
+      id: install-flit
+      shell: bash
+      run: |
+        if [[ "${{ inputs.install_flit }}" == true ]] ; then
+            echo "::group::Installing flit"
+            apt install --yes flit || true
+            echo "::endgroup::"
+            echo "Version of flit: $( flit --version )"
+        else
+            echo "Installation of flit is not necessary."
+        fi
+
 
 # vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list

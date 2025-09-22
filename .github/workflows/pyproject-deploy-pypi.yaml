@@ -1,0 +1,93 @@
+---
+
+name: "Deployment of the Python package based on pyproject to PyPi"
+
+################################################################################
+# yamllint disable-line rule:truthy
+on:
+  workflow_call:
+    inputs:
+      latest_python_version:
+        description: "The latest Python version for executing linter tests."
+        type: string
+        default: "3.12"
+      retention_days:
+        description: "The days for keeping the generated packages at GitHub."
+        type: number
+        default: 8
+      entrypoints:
+        description: "A whitespace separated list of entrypoints, which are converted to executable Python scripts."
+        type: string
+        default: ''
+      data_dir:
+        description: "The data directory for containing man pages, i18n files a.s.o."
+        type: string
+        default: 'data'
+    secrets:
+      pypi_token:
+        description: "The token to use for transmitting the package to PyPi"
+
+################################################################################
+jobs:
+
+  ###########################
+  deploy_to_pypi:
+    runs-on: ubuntu-latest
+    name: "Deploy Python package based on pyproject to PyPi"
+    container: python:${{ inputs.latest_python_version }}
+    env:
+      PYPI_TOKEN_GIVEN: ${{ secrets.pypi_token && 'given' || 'NOT given' }}
+    steps:
+      - name: "Checking out the sources."
+        uses: actions/checkout@v5
+
+      - name: "Preparing the Debian container"
+        uses: fbrehm/actions/.github/actions/prepare-debian-container@develop
+        with:
+          manage_locales: false
+          install_flit: true
+
+      - name: "Installing necessary PIP modules."
+        uses: fbrehm/actions/.github/actions/pyproject-install-pip-modules@develop
+        with:
+          install_pytest: false
+          install_linter_tools: false
+          data_dir: ${{ inputs.data_dir }}
+
+      - name: "Show Environment"
+        shell: bash
+        run: |
+          echo "Bash enviroment:"
+          env | sort
+          echo -e "Python version:"
+          source .venv/bin/activate
+          python --version
+          echo -e "Pypi token was ${PYPI_TOKEN_GIVEN}"
+
+      - name: "Compiling i18n files ..."
+        id: compile-i18n
+        uses: fbrehm/actions/.github/actions/compile-locales@develop
+
+      - name: "Building the Python packages and deploying it to PyPi."
+        uses: casperdcl/deploy-pypi@v2
+        with:
+          password: ${{ secrets.pypi_token }}
+          pip: wheel -w dist/ --no-deps .
+          # build: clean sdist -d dist/ bdist_wheel -d dist/
+          build: --outdir dist .
+          # only upload if a tag is pushed (otherwise just build & check)
+          upload: ${{ github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags') && secrets.pypi_token != '' }}
+
+      - name: 'Show results'
+        shell: bash
+        run: ls -l --color=always dist/
+
+      - name: 'Upload Python Package'
+        uses: actions/upload-artifact@v4
+        if: ${{ github.ref_name == 'main' || github.ref_name == 'master' || startsWith(github.ref_name, 'test') || || startsWith(github.ref_name, 'build') || github.ref_type == 'tag' }}
+        with:
+          name: python_pkgs
+          path: dist/*
+          retention-days: ${{ inputs.retention_days }}
+
+# vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list

@@ -123,6 +123,12 @@ jobs:
           manage_locales: ${{ inputs.has_i18n }}
           additional_locales: '${{ matrix.locale }}'
 
+      - name: "Compiling i18n files ..."
+        id: compile-i18n
+        uses: fbrehm/actions/.github/actions/compile-locales@develop
+        with:
+          to_data_dir: false
+
       - name: "Installing PIP modules and linter tools"
         uses: fbrehm/actions/.github/actions/pyproject-install-pip-modules@develop
         with:
