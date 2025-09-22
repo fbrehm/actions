@@ -69,7 +69,8 @@ jobs:
         uses: fbrehm/actions/.github/actions/compile-locales@develop
 
       - name: "Building the Python packages and deploying it to PyPi."
-        uses: casperdcl/deploy-pypi@v2
+        # uses: casperdcl/deploy-pypi@v2
+        uses: fbrehm/actions/.github/actions/deploy-pypi@develop
         with:
           password: ${{ secrets.pypi_token }}
           pip: wheel -w dist/ --no-deps .
