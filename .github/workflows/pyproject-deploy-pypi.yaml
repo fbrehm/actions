@@ -76,6 +76,7 @@ jobs:
           pip: wheel -w dist/ --no-deps .
           # build: clean sdist -d dist/ bdist_wheel -d dist/
           build: --outdir dist .
+          check: false
           # only upload if a tag is pushed (otherwise just build & check)
           upload: ${{ github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags') && secrets.pypi_token != '' }}
 

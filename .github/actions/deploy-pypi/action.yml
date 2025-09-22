@@ -1,6 +1,7 @@
 name: PyPI Deployment
 author: Casper da Costa-Luis
 description: Securely build and upload Python distributions to PyPI
+
 inputs:
   user:
     description: PyPI username
@@ -55,19 +56,21 @@ inputs:
     description: Continue uploading files if one already exists
     required: false
     default: false
-# outputs:
-#   whl:
-#     description: Basename of *.whl for upload
-#     value: ${{ steps.upload.outputs.whl }}
-#   targz:
-#     description: Basename of *.tar.gz for upload
-#     value: ${{ steps.upload.outputs.targz }}
-#   whl_asc:
-#     description: Basename of *.whl.asc for upload (requires <gpg_key>)
-#     value: ${{ steps.upload.outputs.whl_asc }}
-#   targz_asc:
-#     description: Basename of *.tar.gz.asc for upload (requires <gpg_key>)
-#     value: ${{ steps.upload.outputs.targz_asc }}
+
+outputs:
+  whl:
+    description: Basename of *.whl for upload
+    value: ${{ steps.upload.outputs.whl }}
+  targz:
+    description: Basename of *.tar.gz for upload
+    value: ${{ steps.upload.outputs.targz }}
+  whl_asc:
+    description: Basename of *.whl.asc for upload (requires <gpg_key>)
+    value: ${{ steps.upload.outputs.whl_asc }}
+  targz_asc:
+    description: Basename of *.tar.gz.asc for upload (requires <gpg_key>)
+    value: ${{ steps.upload.outputs.targz_asc }}
+
 runs:
   using: composite
   steps:
@@ -132,62 +135,77 @@ runs:
             echo "::endgroup::"
         fi
 
-    # - name: check
-    #   shell: bash
-    #   env:
-    #     INPUT_DIST_DIR: ${{ inputs.dist_dir }}
-    #     INPUT_CHECK: ${{ inputs.check }}
-    #     ACTIONS_ID_TOKEN_REQUEST_TOKEN: ""
-    #   run: |
-    #     if [[ "$INPUT_CHECK" == true ]]; then
-    #         python -m pip install twine
-    #         python -m twine check "${INPUT_DIST_DIR%%/}"/*
-    #     fi
+    - name: check
+      shell: bash
+      env:
+        INPUT_DIST_DIR: ${{ inputs.dist_dir }}
+        INPUT_CHECK: ${{ inputs.check }}
+        ACTIONS_ID_TOKEN_REQUEST_TOKEN: ""
+      run: |
+        if [[ "$INPUT_CHECK" == true ]]; then
+            echo "Executing Python twine ..."
+            echo "::group::Executing: python -m pip install twine"
+            python -m pip install twine
+            echo "::endgroup::"
+            echo "::group::Executing: python -m twine check \"${INPUT_DIST_DIR%%/}\"/*"
+            python -m twine check "${INPUT_DIST_DIR%%/}"/*
+            echo "::endgroup::"
+        else
+            echo "Twine checks will not be executed."
+        fi
 
-    # - id: upload
-    #   name: upload
-    #   shell: bash
-    #   env:
-    #     INPUT_UPLOAD: ${{ inputs.upload }}
-    #     INPUT_DIST_DIR: ${{ inputs.dist_dir }}
-    #     INPUT_GPG_KEY: ${{ inputs.gpg_key }}
-    #     INPUT_SKIP_EXISTING: ${{ inputs.skip_existing }}
-    #     TWINE_REPOSITORY_URL: ${{ inputs.url }}
-    #     TWINE_USERNAME: ${{ inputs.user }}
-    #     TWINE_PASSWORD: ${{ inputs.password }}
-    #     INPUT_REGISTRY_DOMAIN: ${{ inputs.registry_domain }}
-    #     INPUT_ATTESTATIONS: ${{ inputs.attestations }}
-    #   run: |
-    #     DIST="${INPUT_DIST_DIR%%/}"
-    #     if [[ "$INPUT_UPLOAD" == true ]]; then
-    #         TWINE_OPTS=""
-    #         if [[ -n "$INPUT_GPG_KEY" ]]; then
-    #             gpg --import <(echo "$INPUT_GPG_KEY")
-    #             TWINE_OPTS="$TWINE_OPTS -s --sign-with gpg"
-    #         fi
-    #         if [[ "$INPUT_SKIP_EXISTING" == true ]]; then
-    #             TWINE_OPTS="$TWINE_OPTS --skip-existing"
-    #         fi
-    #         python -m pip install twine
-    #         if [[ -z "$TWINE_PASSWORD" ]]; then
-    #             # vis https://docs.pypi.org/trusted-publishers/using-a-publisher/#the-manual-way
-    #             oidc_token=$(curl -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=pypi" | jq -r '.value')
-    #             export TWINE_PASSWORD=$(curl $INPUT_REGISTRY_DOMAIN/_/oidc/mint-token -d "{\"token\": \"${oidc_token}\"}" | jq -r '.token')
-    #             echo "::add-mask::$TWINE_PASSWORD"
-    #             if [[ "$INPUT_ATTESTATIONS" == true ]]; then
-    #                 python -m pip install 'twine>=5.1' pypi-attestations
-    #                 python -m pypi_attestations sign "${DIST}"/*
-    #             fi
-    #             TWINE_OPTS="$TWINE_OPTS --attestations"
-    #         fi
-    #         python -m twine upload $TWINE_OPTS "${DIST}"/*
-    #     fi
-    #     pushd "$DIST"
-    #     echo "whl=$( (ls *.whl || :) | tr '\n' ' ' | sed 's/ *$//' )" >> $GITHUB_OUTPUT
-    #     echo "whl_asc=$( (ls *.whl.asc || :) | tr '\n' ' ' | sed 's/ *$//' )" >> $GITHUB_OUTPUT
-    #     echo "targz=$(ls *.tar.gz || :)" >> $GITHUB_OUTPUT
-    #     echo "targz_asc=$(ls *.tar.gz.asc || :)" >> $GITHUB_OUTPUT
-    #     popd
+    - id: upload
+      name: upload
+      shell: bash
+      env:
+        INPUT_UPLOAD: ${{ inputs.upload }}
+        INPUT_DIST_DIR: ${{ inputs.dist_dir }}
+        INPUT_GPG_KEY: ${{ inputs.gpg_key }}
+        INPUT_SKIP_EXISTING: ${{ inputs.skip_existing }}
+        TWINE_REPOSITORY_URL: ${{ inputs.url }}
+        TWINE_USERNAME: ${{ inputs.user }}
+        TWINE_PASSWORD: ${{ inputs.password }}
+        INPUT_REGISTRY_DOMAIN: ${{ inputs.registry_domain }}
+        INPUT_ATTESTATIONS: ${{ inputs.attestations }}
+      run: |
+        DIST="${INPUT_DIST_DIR%%/}"
+        if [[ "$INPUT_UPLOAD" == true ]]; then
+            TWINE_OPTS=""
+            if [[ -n "$INPUT_GPG_KEY" ]]; then
+                gpg --import <(echo "$INPUT_GPG_KEY")
+                TWINE_OPTS="$TWINE_OPTS -s --sign-with gpg"
+            fi
+            if [[ "$INPUT_SKIP_EXISTING" == true ]]; then
+                TWINE_OPTS="$TWINE_OPTS --skip-existing"
+            fi
+            echo "::group::Executing: python -m pip install twine"
+            python -m pip install twine
+            echo "::endgroup::"
+            if [[ -z "$TWINE_PASSWORD" ]]; then
+                # vis https://docs.pypi.org/trusted-publishers/using-a-publisher/#the-manual-way
+                oidc_token=$(curl -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=pypi" | jq -r '.value')
+                export TWINE_PASSWORD=$(curl $INPUT_REGISTRY_DOMAIN/_/oidc/mint-token -d "{\"token\": \"${oidc_token}\"}" | jq -r '.token')
+                echo "::add-mask::$TWINE_PASSWORD"
+                if [[ "$INPUT_ATTESTATIONS" == true ]]; then
+                    echo "::group::Executing: python -m pip install 'twine>=5.1' pypi-attestations"
+                    python -m pip install 'twine>=5.1' pypi-attestations
+                    echo "::endgroup::"
+                    echo "::group::Executing: python -m pypi_attestations sign \"${DIST}\"/*\"
+                    python -m pypi_attestations sign "${DIST}"/*
+                    echo "::endgroup::"
+                fi
+                TWINE_OPTS="$TWINE_OPTS --attestations"
+            fi
+            echo "::group::Executing:python -m twine upload ${TWINE_OPTS} \"${DIST}"/*\"
+            python -m twine upload $TWINE_OPTS "${DIST}"/*
+            echo "::endgroup::"
+        fi
+        pushd "${DIST}"
+        echo "whl=$( (ls *.whl || :) | tr '\n' ' ' | sed 's/ *$//' )" >> $GITHUB_OUTPUT
+        echo "whl_asc=$( (ls *.whl.asc || :) | tr '\n' ' ' | sed 's/ *$//' )" >> $GITHUB_OUTPUT
+        echo "targz=$(ls *.tar.gz || :)" >> $GITHUB_OUTPUT
+        echo "targz_asc=$(ls *.tar.gz.asc || :)" >> $GITHUB_OUTPUT
+        popd
 
 branding:
   icon: upload-cloud
