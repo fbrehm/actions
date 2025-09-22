@@ -190,13 +190,13 @@ runs:
                     echo "::group::Executing: python -m pip install 'twine>=5.1' pypi-attestations"
                     python -m pip install 'twine>=5.1' pypi-attestations
                     echo "::endgroup::"
-                    echo "::group::Executing: python -m pypi_attestations sign \"${DIST}\"/*\"
+                    echo "::group::Executing: python -m pypi_attestations sign ..."
                     python -m pypi_attestations sign "${DIST}"/*
                     echo "::endgroup::"
                 fi
                 TWINE_OPTS="$TWINE_OPTS --attestations"
             fi
-            echo "::group::Executing:python -m twine upload ${TWINE_OPTS} \"${DIST}\"/*"
+            echo "::group::Executing:python -m twine upload ${TWINE_OPTS} ..."
             python -m twine upload $TWINE_OPTS "${DIST}"/*
             echo "::endgroup::"
         fi
