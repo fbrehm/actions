@@ -51,7 +51,7 @@ runs:
             base_name=$( echo "${{ github.repository }}" | sed -e 's|.*/||' )
             base_name="${base_name}.${{ github.ref_name }}"
             base_name=$( echo "${base_name}" | sed -e 's|//*|_|g' )
-            file_name="${${DATA_DIR}/build/${base_name}"
+            file_name="${DATA_DIR}/build/${base_name}"
             echo "Creating '${file_name}' ..."
             date --rfc-3339=seconds > "${file_name}"
         else
