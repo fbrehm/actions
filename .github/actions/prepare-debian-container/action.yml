@@ -13,7 +13,7 @@ inputs:
     required: false
     default: 'de_DE.UTF-8'
   install_flit:
-    description: 'Install package "flit'"."
+    description: 'Install package "flit".'
     required: false
     type: boolean
     default: false
