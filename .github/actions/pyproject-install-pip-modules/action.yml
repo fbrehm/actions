@@ -41,13 +41,19 @@ runs:
       shell: bash
       run: |
         if [[ -n "${DATA_DIR}" ]] ; then
-            echo "Ensuring data directory '${DATA_DIR}' ..."
-            if [[ -d "${DATA_DIR}" ]] ; then
-                echo "Data directory '${DATA_DIR}' is already existing."
+            echo "Ensuring data directory '${DATA_DIR}/build' ..."
+            if [[ -d "${DATA_DIR}/build" ]] ; then
+                echo "Data directory '${DATA_DIR}/build' is already existing."
             else
-                echo "Creating data directory '${DATA_DIR}' ..."
-                mkdir -p -v "${DATA_DIR}"
+                echo "Creating data directory '${DATA_DIR}/build' ..."
+                mkdir -p -v "${DATA_DIR}/build"
             fi
+            base_name=$( echo "${{ github.repository }}" | sed -e 's|.*/||' )
+            base_name="${base_name}.${{ github.ref_name }}"
+            base_name=$( echo "${base_name}" | sed -e 's|//*|_|g' )
+            file_name="${${DATA_DIR}/build/${base_name}"
+            echo "Creating '${file_name}' ..."
+            date --rfc-3339=seconds > "${file_name}"
         else
             echo "No data directory defined."
         fi
