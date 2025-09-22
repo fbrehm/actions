@@ -84,7 +84,7 @@ jobs:
 
       - name: 'Upload Python Package'
         uses: actions/upload-artifact@v4
-        if: ${{ github.ref_name == 'main' || github.ref_name == 'master' || startsWith(github.ref_name, 'test') || || startsWith(github.ref_name, 'build') || github.ref_type == 'tag' }}
+        if: ${{ github.ref_name == 'main' || github.ref_name == 'master' || startsWith(github.ref_name, 'test') || startsWith(github.ref_name, 'build') || github.ref_type == 'tag' }}
         with:
           name: python_pkgs
           path: dist/*
