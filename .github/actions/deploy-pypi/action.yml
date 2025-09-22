@@ -183,7 +183,7 @@ runs:
             echo "::endgroup::"
             if [[ -z "$TWINE_PASSWORD" ]]; then
                 # vis https://docs.pypi.org/trusted-publishers/using-a-publisher/#the-manual-way
-                oidc_token=$(curl -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=pypi" | jq -r '.value')
+                oidc_token=$(curl -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=pypi" | jq -r '.value')
                 export TWINE_PASSWORD=$(curl $INPUT_REGISTRY_DOMAIN/_/oidc/mint-token -d "{\"token\": \"${oidc_token}\"}" | jq -r '.token')
                 echo "::add-mask::$TWINE_PASSWORD"
                 if [[ "$INPUT_ATTESTATIONS" == true ]]; then
@@ -196,7 +196,7 @@ runs:
                 fi
                 TWINE_OPTS="$TWINE_OPTS --attestations"
             fi
-            echo "::group::Executing:python -m twine upload ${TWINE_OPTS} \"${DIST}"/*\"
+            echo "::group::Executing:python -m twine upload ${TWINE_OPTS} \"${DIST}\"/*"
             python -m twine upload $TWINE_OPTS "${DIST}"/*
             echo "::endgroup::"
         fi
