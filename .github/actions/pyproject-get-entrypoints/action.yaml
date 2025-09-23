@@ -87,9 +87,9 @@ runs:
         echo "ENTRYPOINTS=${ENTRYPOINTS}" >>"$GITHUB_ENV"
 
         if [[ -n "${ENTRYPOINTS}" ]] ; then
-            echo "::notice::Found entrypoints: ${ENTRYPOINTS}"
+            echo "::notice title=Get entrypoints::Found entrypoints: ${ENTRYPOINTS}"
         else
-            echo "::notice::Did not found any entrypoints."
+        echo "::notice title=Get entrypoints::Did not found any entrypoints."
         fi
 
 # vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list
