@@ -115,7 +115,7 @@ jobs:
           env | sort
           echo "::endgroup::"
           echo -e "."
-          echo "::notice::Testing Python version: $( python --version ) and locale '${{ matrix.locale }}'"
+          echo "::notice title=Execute Python tests::Testing Python version: $( python --version ) and locale '${{ matrix.locale }}'"
 
       - name: "Preparing the Debian container for locale '${{ matrix.locale }}'"
         uses: fbrehm/actions/.github/actions/prepare-debian-container@develop

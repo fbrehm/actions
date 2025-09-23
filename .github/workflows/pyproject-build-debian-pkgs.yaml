@@ -515,6 +515,17 @@ jobs:
           vendor: ${{ matrix.distributor }}
           distro: ${{ matrix.os_codename }}
 
+      - name: "Installing Python 3 .."
+        shell: bash
+        run: |
+          echo "."
+          echo "Installing Python 3 ..."
+          echo "."
+          echo "::group::APT install python3"
+          apt install python3 --yes
+          echo "::endgroup::"
+          echo "::notice title=Build Debian binary packages::Python version: $(python3 --version)"
+
       - name: "Preparing the Debian container"
         id: prepare-debian-container
         uses: fbrehm/prepare-debian-container@main
