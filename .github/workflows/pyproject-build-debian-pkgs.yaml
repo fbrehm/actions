@@ -260,7 +260,160 @@ jobs:
           echo "${matrix_json}" | jq -C .
 
           echo "matrix=${matrix_json}" >> ${GITHUB_OUTPUT}
-          echo "Using Matrix: $( cat ${GITHUB_OUTPUT} )"
+
+  ###########################
+  build-debian-sources:
+    runs-on: ubuntu-latest
+    name: "Build Deb Source Packages"
+    if: ${{ github.ref_name == 'main' || github.ref_name == 'master' || startsWith(github.ref_name, 'test') || github.ref_name == 'dev/workflow' || startsWith(github.ref_name, 'build') || startsWith(github.ref, 'refs/tags/')  }}
+    container: debian:${{ inputs.latest_debian_version }}
+    env:
+      DEBIAN_VERSION: ${{ inputs.latest_debian_version }}
+    steps:
+      - name: "Checking out sources."
+        id: checkout-sources
+        uses: actions/checkout@v5
+
+      - name: "Install Debian Python Build Environment"
+        id: install-debian-pkgs
+        uses: fbrehm/debian-install-python-buildenv@main
+        with:
+          additional_packages: ${{ inputs.additional_debian_build_packages }}
+
+      - name: "Set and show Environment"
+        id: set-env
+        shell: bash
+        run: |
+          echo "Updating GITHUB_ENV ..."
+          export PKG_NAME=$( head -n 1 debian/changelog | awk '{print $1}' )
+          export PKG_VERSION=$( head -n 1 debian/changelog | sed -e "s/^[^(]*(//" -e "s/).*//" )
+          export SIGNING_HOOK_SCRIPT="${HOME}/signing-hook-script.sh"
+
+          echo "PKG_NAME=${PKG_NAME}" >>"$GITHUB_ENV"
+          echo "PKG_VERSION=${PKG_VERSION}" >>"$GITHUB_ENV"
+          echo "SIGNING_HOOK_SCRIPT=${SIGNING_HOOK_SCRIPT}" >>"$GITHUB_ENV"
+
+          echo "::notice::Building Debian source package on Debian ${{ inputs.latest_debian_version }}."
+          if [[ -f /etc/os-release ]] ; then
+              echo -e "OS release for building source package:"
+              cat /etc/os-release
+          fi
+
+          echo -e "::group::Bash enviroment:"
+          env | sort
+          echo "::endgroup::"
+
+          echo "::notice::Python version: $(python3 --version)"
+
+          if [[ -f setup.py ]] ; then
+              echo ""
+              echo "Removing setup.py ..."
+              rm -fv setup.py
+          fi
+
+      - name: 'Adding Debian repo definitions of Frank Brehm'
+        uses: fbrehm/github-add-fb-debian-repo@main
+        with:
+          vendor: Debian
+          distro: ${{ inputs.latest_debian_version }}
+
+      - name: "Preparing the Debian container"
+        uses: fbrehm/prepare-debian-container@main
+        with:
+          manage_locales: false
+          install_flit: true
+
+      - name: 'Preparing GPG for signing files without entering a password'
+        uses: fbrehm/github-setup-gpg@main
+        with:
+          public_key: ${{ secrets.public_key }}
+          private_key: ${{ secrets.private_key }}
+          key_password: ${{ secrets.key_password }}
+          password_file: ${{ inputs.password_file }}
+          key_id: ${{ inputs.key_id }}
+
+      - name: 'Create signing hook script of building source package.'
+        shell: bash
+        run: |
+          dsc_file="${PKG_NAME}_${PKG_VERSION}.dsc"
+          buildinfo_file="${PKG_NAME}_${PKG_VERSION}_source.buildinfo"
+          changes_file="${PKG_NAME}_${PKG_VERSION}_source.changes"
+          password_file_abs=$( readlink --canonicalize-missing "${{ inputs.password_file }}" )
+
+          if [[ -e "${{ inputs.password_file }}" ]] ; then
+              hash_bang='#!/usr/bin/env bash'
+
+              shell_lines=$( cat <<-EOF
+            	${hash_bang}
+            	echo
+            	echo "This is the signing script."
+            	echo "==========================="
+            	echo
+            	printf "Command line: "
+            	echo \$0 \$*
+            	printf "Pwd: "
+            	pwd
+            	echo
+            	echo "Current sources:"
+            	ls -l --color=always '${dsc_file}' '${buildinfo_file}' '${changes_file}'
+            	echo
+            	cmd="echo 'y' | debsign -k${{ inputs.key_id }} '${dsc_file}' '${buildinfo_file}' '${changes_file}'"
+            	echo "Executing: \$cmd"
+            	eval \$cmd
+            	echo
+            	echo "Signed sources:"
+            	ls -l --color=always '${dsc_file}' '${buildinfo_file}' '${changes_file}'
+            	echo
+            	EOF
+              )
+
+              echo "${shell_lines}" > "${SIGNING_HOOK_SCRIPT}"
+              chmod +x --verbose "${SIGNING_HOOK_SCRIPT}"
+
+              echo -e "Generated ${SIGNING_HOOK_SCRIPT}:"
+              cat "${SIGNING_HOOK_SCRIPT}"
+              echo "<--"
+
+              echo -e "The imported private keys:"
+              gpg --list-secret-keys
+              echo "<-- EOF"
+          else
+              echo -e "\nDon't create '${SIGNING_HOOK_SCRIPT}' because of failing necessary data."
+          fi
+
+      - name: 'Finally build the source package.'
+        shell: bash
+        run: |
+          PASSWORD_FILE_ABS=$( readlink --canonicalize-missing "${{ inputs.password_file }}" )
+          echo "Password file: '{PASSWORD_FILE_ABS}'
+
+          if [[ -e "${PASSWORD_FILE_ABS}" && -x "${SIGNING_HOOK_SCRIPT}" ]] ; then
+              echo "::notice title=build-debian-sorce-pkgs::Building signed Debian source package for ${PKG_NAME}-${PKG_VERSION}"
+              echo "::notice title=pyproject-build-debian-pkgs::Building signed Debian source package for ${PKG_NAME}-${PKG_VERSION}"
+              echo "y" | debuild --signing-hook="${SIGNING_HOOK_SCRIPT}" -S -i
+          else
+              echo "::notice title=build-debian-source-package::Building unsigned Debian source package for ${PKG_NAME}-${PKG_VERSION}"
+              debuild -S -i --no-sign
+          fi
+
+          echo -e "\nGenerated stuff:"
+          ls -lA --color=always ..
+          echo "<-- EOF"
+
+          echo -e "\nMoving all to the right place ..."
+          mkdir -pv debian/pkgs/src
+          mv -vi ../*.dsc ../*.tar.* ../*.build* ../*.changes debian/pkgs/src
+
+          echo -e "\nPut stuff now at the right place:"
+          ls -lA debian/pkgs/*/*
+          echo "<-- EOF"
+
+      - name: 'Upload Source Package'
+        uses: actions/upload-artifact@v4
+        with:
+          name: debian_sources
+          path: debian/pkgs/*/*
+          retention-days: ${{ inputs.retention_days }}
 
 
 # vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list
