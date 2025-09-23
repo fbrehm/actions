@@ -539,6 +539,7 @@ jobs:
         with:
           install_pytest: false
           install_linter_tools: false
+          install_py_venv_package: true
           data_dir: ${{ inputs.data_dir }}
 
       - name: 'Creating man pages'
