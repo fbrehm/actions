@@ -276,7 +276,7 @@ jobs:
 
       - name: "Install Debian Python Build Environment"
         id: install-debian-pkgs
-        uses: fbrehm/debian-install-python-buildenv@main
+        uses: fbrehm/debian-install-python-buildenv@develop
         with:
           additional_packages: ${{ inputs.additional_debian_build_packages }}
 
