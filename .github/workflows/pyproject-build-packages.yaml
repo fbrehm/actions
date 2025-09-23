@@ -244,6 +244,7 @@ jobs:
       timezone: ${{ inputs.timezone }}
       entrypoints: ${{ needs.check-src.outputs.entrypoints }}
       data_dir: ${{ needs.check-src.outputs.data_dir }}
+      revision: ${{ inputs.revision }}
     secrets:
       key_password: ${{ secrets.key_password }}
       private_key: ${{ secrets.private_key }}
