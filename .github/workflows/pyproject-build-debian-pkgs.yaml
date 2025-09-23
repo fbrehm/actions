@@ -544,7 +544,7 @@ jobs:
           data_dir: ${{ inputs.data_dir }}
 
       - name: 'Creating man pages'
-        id: create-man_pages
+        id: create-man-pages
         shell: bash
         env:
           FLIT_ROOT_INSTALL: 1
