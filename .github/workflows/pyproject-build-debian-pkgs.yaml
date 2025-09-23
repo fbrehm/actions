@@ -105,6 +105,7 @@ jobs:
           echo "::endgroup::"
 
       - name: "Install JQ"
+        id: install-jq
         shell: bash
         run: |
           echo '.'
@@ -115,7 +116,7 @@ jobs:
               apt install --yes jq
               echo "::endgroup::"
           fi
-          echo -e "Version of JQ: $( jq --version )"
+          echo "Version of JQ: $( jq --version )"
 
       - name: "Defining the build-matrix"
         id: set-matrix
@@ -301,7 +302,7 @@ jobs:
           echo "PKG_VERSION=${PKG_VERSION}" >>"$GITHUB_ENV"
           echo "SIGNING_HOOK_SCRIPT=${SIGNING_HOOK_SCRIPT}" >>"$GITHUB_ENV"
 
-          echo "::notice::Building Debian source package on Debian ${{ inputs.latest_debian_version }}."
+          echo "::notice title=Build Debian source package::Building Debian source package on Debian ${{ inputs.latest_debian_version }}."
           if [[ -f /etc/os-release ]] ; then
               echo "OS release for building source package:"
               cat /etc/os-release
@@ -312,7 +313,7 @@ jobs:
           env | sort
           echo "::endgroup::"
 
-          echo "::notice::Python version: $(python3 --version)"
+          echo "::notice title=Build Debian source package::Python version: $(python3 --version)"
 
           if [[ -f setup.py ]] ; then
               echo "."

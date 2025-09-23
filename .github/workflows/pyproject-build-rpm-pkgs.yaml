@@ -1,0 +1,224 @@
+---
+
+name: "Building RPM packages of a pyproject source package for Enterprise Linux."
+
+################################################################################
+# yamllint disable-line rule:truthy
+on:
+  workflow_call:
+    inputs:
+      debian_email:
+        description: 'The mail address of the user, which will be used to update debian/chagelog.'
+        type: string
+        default: 'frank@brehm-online.com'
+      debian_fullname:
+        description: 'A human readable name of the user, which will be used to update debian/chagelog.'
+        type: string
+        default: 'Frank Brehm'
+      has_i18n:
+        description: 'Does the package support localisation and internationalisation?'
+        type: boolean
+        default: true
+      languages:
+        description: 'A list of languages, which will be supported, if has_i18n is true.'
+        type: string
+        default: '["de_DE.UTF-8", "en_US.UTF-8"]'
+      additional_locales:
+        description: 'A whitespace separated list of additional locales (except en_US.UTF-8)'
+        type: string
+        default: 'de_DE.UTF-8'
+      latest_debian_version:
+        description: 'The short name of the latest stable Debian version.'
+        type: string
+        default: 'bookworm'
+      el_versions:
+        description: 'Whitespace separated list of Enterprise Linux versions to build the package for.'
+        type: string
+        default: 'el-8 el-9'
+      additional_rpm_build_packages:
+        description: "A withespace separated list of packages additional to the base build packages"
+        type: string
+      password_file:
+        description: 'The file containing the password of the private GPG key.'
+        type: string
+        default: '.private/uhu.txt'
+      key_id:
+        description: 'The ID of the used private GPG key.'
+        type: string
+      retention_days:
+        description: "The days for keeping the generated packages at GitHub."
+        type: number
+        default: 8
+      timezone:
+        description: "The timezone used for this job."
+        type: string
+        default: 'Europe/Berlin'
+      own_repo_server:
+        description: 'The FQDN of the own YUM repository server.'
+        type: string
+        default: 'repo.uhu-banane.de'
+      own_repo_server_use_https:
+        description: 'Use HTTPS instead of HTTP as the URL schema for the own repo server.'
+        type: boolean
+        default: false
+      own_repo_name:
+        description: 'The name of the own Yum repository'
+        type: string
+        default: 'frank-brehm'
+      own_repo_description:
+        description: 'The verbose description of the own Yum repository'
+        type: string
+        default: 'Frank Brehms Yum repository for Enterprise Linux %s'
+      own_repo_root_path:
+        description: 'The root path on the own YUM repository server.'
+        type: string
+        default: '/Yum'
+      template_specfile:
+        description: "The template spec file used to generate the final spec file."
+        type: string
+        default: 'template.spec'
+      entrypoints:
+        description: "A whitespace separated list of entrypoints, which are converted to executable Python scripts."
+        type: string
+        default: ''
+      data_dir:
+        description: "The data directory for containing man pages, i18n files a.s.o."
+        type: string
+        default: ''
+      revision:
+        description: "Revision count for current version."
+        type: string
+        default: '1'
+    secrets:
+      public_key:
+        description: 'The exported public GPG key"'
+      private_key:
+        description: 'The exported private GPG key"'
+      key_password:
+        description: 'The password of the imported private GPG key.'
+
+################################################################################
+env:
+  DEBFULLNAME: ${{ inputs.debian_fullname }}
+  DEBEMAIL: ${{ inputs.debian_email }}
+  GIT_REF: ${{ github.ref }}
+  GIT_REFNAME: ${{ github.ref_name }}
+  GIT_REFTYPE: ${{ github.ref_type }}
+
+################################################################################
+jobs:
+
+  ###########################
+  define-rpm-build-matrix:
+    name: "Define RPM build Matrix"
+    runs-on: ubuntu-latest
+    if: ${{ github.ref_name == 'main' || github.ref_name == 'master' || startsWith(github.ref_name, 'test') || github.ref_name == 'dev/workflow' || startsWith(github.ref_name, 'build') || startsWith(github.ref, 'refs/tags/')  }}
+    container: debian:${{ inputs.latest_debian_version }}
+    env:
+      EL_VERSIONS: ${{ inputs.el_versions }}
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: "Update package lists"
+        id: apt-update
+        shell: bash
+        run: |
+          echo '.'
+          echo "::group::Update all package lists."
+          apt update --yes
+          echo "::endgroup::"
+
+      - name: "Install JQ"
+        id: install-jq
+        shell: bash
+        run: |
+          echo '.'
+          if type -p jq >/dev/null; then
+              echo "The package jq is already installed."
+          else
+              echo "::group::Installing package 'jq' ..."
+              apt install --yes jq
+              echo "::endgroup::"
+          fi
+          echo "Version of JQ: $( jq --version )"
+
+      - name: "Defining the build-matrix"
+        id: set-matrix
+        shell: bash
+        run: |
+          if [[ -z "${EL_VERSIONS}" ]] ; then
+              echo "::error::No Enterprise Linux versions given for building packages."
+              exit 5
+          fi
+          matrix_json='{"include": ['
+          first_distro='y'
+
+          for el_version in ${EL_VERSIONS}; do
+            el_version_lc=$( echo "${el_version}" | tr '[:upper:]' '[:lower:]' )
+            echo "::debug::Performing Enterprise Linux version '${el_version}' -> '${el_version_lc}'"
+            case "${el_version_lc}" in
+              el-8|el8)
+                if [[ "${first_distro}" != 'y' ]] ; then
+                  matrix_json+=", "
+                fi
+                matrix_json+="{"
+                matrix_json+="\"title\": \"Enterprise Linux 8\", "
+                matrix_json+="\"el_version\": \"8\", "
+                matrix_json+="\"py_minor_version\": \"8\", "
+                matrix_json+="\"py_version_dot\": \"3.8\", "
+                matrix_json+="\"py_version_nodot\": \"38\", "
+                matrix_json+="\"container\": \"rockylinux/rockylinux:8\", "
+                matrix_json+="\"has_powertools\": \"true\", "
+                matrix_json+="\"epel_package\": \"epel-release\""
+                matrix_json+="}"
+                echo "::notice title=Define RPM build matrix::Adding Enterprise Linux 8"
+                ;;
+              el-9|el9)
+                if [[ "${first_distro}" != 'y' ]] ; then
+                  matrix_json+=", "
+                fi
+                matrix_json+="{"
+                matrix_json+="\"title\": \"Enterprise Linux 9\", "
+                matrix_json+="\"el_version\": \"9\", "
+                matrix_json+="\"py_minor_version\": \"9\", "
+                matrix_json+="\"py_version_dot\": \"3\", "
+                matrix_json+="\"py_version_nodot\": \"3\", "
+                matrix_json+="\"container\": \"rockylinux/rockylinux:9\", "
+                matrix_json+="\"has_powertools\": \"false\", "
+                matrix_json+="\"epel_package\": \"epel-release\""
+                matrix_json+="}"
+                echo "::notice title=Define RPM build matrix::Adding Enterprise Linux 9"
+                ;;
+              el-10|el10)
+                if [[ "${first_distro}" != 'y' ]] ; then
+                  matrix_json+=", "
+                fi
+                matrix_json+="{"
+                matrix_json+="\"title\": \"Enterprise Linux 10\", "
+                matrix_json+="\"el_version\": \"10\", "
+                matrix_json+="\"py_minor_version\": \"10\", "
+                matrix_json+="\"py_version_dot\": \"3\", "
+                matrix_json+="\"py_version_nodot\": \"3\", "
+                matrix_json+="\"container\": \"rockylinux/rockylinux:10\", "
+                matrix_json+="\"has_powertools\": \"false\", "
+                matrix_json+="\"epel_package\": \"epel-release\""
+                matrix_json+="}"
+                echo "::notice title=Define RPM build matrix::Adding Enterprise Linux 10"
+                ;;
+              *)
+                echo "::error title=Define RPM build matrix::Unknown Enterprise Linux version '${el_version}' given." >&2
+                exit 6
+                ;;
+            esac
+            first_distro='n'
+          done
+
+          matrix_json+="]}"
+
+          echo -e "\nGenerated JSON:"
+          echo "${matrix_json}" | jq -C .
+
+          echo "matrix=${matrix_json}" >> ${GITHUB_OUTPUT}
+
+
+# vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list

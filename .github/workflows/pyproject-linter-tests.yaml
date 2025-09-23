@@ -90,7 +90,7 @@ jobs:
         run: |
           echo "Get package version from '${INDEX_FILE}' ..."
           PACKAGE_VERSION=$( cat "${INDEX_FILE}" | grep -P '^__version__(\s|=)' | sed -e "s/^[^'\"]*['\"]//"  -e "s/['\"][ »]*\$//" )
-          echo "::notice::Package version: '${PACKAGE_VERSION}'"
+          echo "::notice title=Execute linter tests::Package version: '${PACKAGE_VERSION}'"
           if [[ "${GITHUB_REF_TYPE}" == 'tag' ]] ; then
               if [[ "${PACKAGE_VERSION}" == "${GITHUB_REF_NAME}" ]] ; then
                   echo "Tag and package version '${GITHUB_REF_NAME}' are okay."

@@ -250,36 +250,40 @@ jobs:
       private_key: ${{ secrets.private_key }}
       public_key: ${{ secrets.public_key }}
 
-  # ###########################
-  # build-rpm-packages:
-  #   name: "Building RPM packages"
-  #   uses: ./.github/workflows/build-python-rpm-packages.yaml
-  #   needs:
-  #     - exec-python-linter
-  #   with:
-  #     additional_locales: ${{ inputs.additional_locales }}
-  #     additional_rpm_build_packages: ${{ inputs.additional_rpm_build_packages }}
-  #     debian_email: ${{ inputs.debian_email }}
-  #     debian_fullname: ${{ inputs.debian_fullname }}
-  #     do_help2man: ${{ inputs.do_help2man }}
-  #     el_versions: ${{ inputs.el_versions }}
-  #     has_i18n: ${{ inputs.has_i18n }}
-  #     key_id: ${{ inputs.key_id }}
-  #     languages: ${{ inputs.languages }}
-  #     latest_debian_version: ${{ inputs.latest_debian_version }}
-  #     own_repo_description: ${{ inputs.own_yum_repo_description }}
-  #     own_repo_name: ${{ inputs.own_yum_repo_name }}
-  #     own_repo_root_path: ${{ inputs.own_yum_repo_root_path }}
-  #     own_repo_server: ${{ inputs.own_yum_repo_server }}
-  #     own_repo_server_use_https: ${{ inputs.own_yum_repo_server_use_https }}
-  #     password_file: ${{ inputs.password_file }}
-  #     retention_days: ${{ inputs.retention_days }}
-  #     template_specfile: ${{ inputs.template_specfile }}
-  #     timezone: ${{ inputs.timezone }}
-  #   secrets:
-  #     key_password: ${{ secrets.key_password }}
-  #     private_key: ${{ secrets.private_key }}
-  #     public_key: ${{ secrets.public_key }}
+  ###########################
+  build-rpm-packages:
+    name: "Building RPM packages"
+    uses: ./.github/workflows/pyproject-build-rpm-pkgs.yaml
+    needs:
+      - exec-python-linter
+      - check-src
+    with:
+      additional_locales: ${{ inputs.additional_locales }}
+      additional_rpm_build_packages: ${{ inputs.additional_rpm_build_packages }}
+      debian_email: ${{ inputs.debian_email }}
+      debian_fullname: ${{ inputs.debian_fullname }}
+      do_help2man: ${{ inputs.do_help2man }}
+      el_versions: ${{ inputs.el_versions }}
+      has_i18n: ${{ inputs.has_i18n }}
+      key_id: ${{ inputs.key_id }}
+      languages: ${{ inputs.languages }}
+      latest_debian_version: ${{ inputs.latest_debian_version }}
+      own_repo_description: ${{ inputs.own_yum_repo_description }}
+      own_repo_name: ${{ inputs.own_yum_repo_name }}
+      own_repo_root_path: ${{ inputs.own_yum_repo_root_path }}
+      own_repo_server: ${{ inputs.own_yum_repo_server }}
+      own_repo_server_use_https: ${{ inputs.own_yum_repo_server_use_https }}
+      password_file: ${{ inputs.password_file }}
+      retention_days: ${{ inputs.retention_days }}
+      template_specfile: ${{ inputs.template_specfile }}
+      timezone: ${{ inputs.timezone }}
+      entrypoints: ${{ needs.check-src.outputs.entrypoints }}
+      data_dir: ${{ needs.check-src.outputs.data_dir }}
+      revision: ${{ inputs.revision }}
+    secrets:
+      key_password: ${{ secrets.key_password }}
+      private_key: ${{ secrets.private_key }}
+      public_key: ${{ secrets.public_key }}
 
   # ###########################
   # deploy-to-repos:
