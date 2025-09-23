@@ -276,7 +276,7 @@ jobs:
 
       - name: "Install Debian Python Build Environment"
         id: install-debian-pkgs
-        uses: fbrehm/debian-install-python-buildenv@develop
+        uses: fbrehm/debian-install-python-buildenv@main
         with:
           additional_packages: ${{ inputs.additional_debian_build_packages }}
 
@@ -344,27 +344,27 @@ jobs:
               hash_bang='#!/usr/bin/env bash'
 
               shell_lines=$( cat <<-EOF
-            	${hash_bang}
-            	echo
-            	echo "This is the signing script."
-            	echo "==========================="
-            	echo
-            	printf "Command line: "
-            	echo \$0 \$*
-            	printf "Pwd: "
-            	pwd
-            	echo
-            	echo "Current sources:"
-            	ls -l --color=always '${dsc_file}' '${buildinfo_file}' '${changes_file}'
-            	echo
-            	cmd="echo 'y' | debsign -k${{ inputs.key_id }} '${dsc_file}' '${buildinfo_file}' '${changes_file}'"
-            	echo "Executing: \$cmd"
-            	eval \$cmd
-            	echo
-            	echo "Signed sources:"
-            	ls -l --color=always '${dsc_file}' '${buildinfo_file}' '${changes_file}'
-            	echo
-            	EOF
+          		${hash_bang}
+          		echo
+          		echo "This is the signing script."
+          		echo "==========================="
+          		echo
+          		printf "Command line: "
+          		echo \$0 \$*
+          		printf "Pwd: "
+          		pwd
+          		echo
+          		echo "Current sources:"
+          		ls -l --color=always '${dsc_file}' '${buildinfo_file}' '${changes_file}'
+          		echo
+          		cmd="echo 'y' | debsign -k${{ inputs.key_id }} '${dsc_file}' '${buildinfo_file}' '${changes_file}'"
+          		echo "Executing: \$cmd"
+          		eval \$cmd
+          		echo
+          		echo "Signed sources:"
+          		ls -l --color=always '${dsc_file}' '${buildinfo_file}' '${changes_file}'
+          		echo
+          		EOF
               )
 
               echo "${shell_lines}" > "${SIGNING_HOOK_SCRIPT}"
