@@ -40,6 +40,7 @@ runs:
         DATA_DIR: ${{ inputs.data_dir }}
       shell: bash
       run: |
+        echo '.'
         if [[ -n "${DATA_DIR}" ]] ; then
             echo "Ensuring data directory '${DATA_DIR}/build' ..."
             if [[ -d "${DATA_DIR}/build" ]] ; then
@@ -62,6 +63,7 @@ runs:
       id: create-venv
       shell: bash
       run: |
+        echo '.'
         echo "Creating Python virtual environment '.venv' ..."
         if [[ "${{ inputs.install_py_venv_package }}" == true ]] ; then
             apt install python3-venv --yes
@@ -72,6 +74,7 @@ runs:
       id: pip-upgrade
       shell: bash
       run: |
+        echo '.'
         echo "Activating virtual environment '.venv'."
         source .venv/bin/activate
         echo "Upgrading Pip."
@@ -85,6 +88,7 @@ runs:
         FLIT_ROOT_INSTALL: 1
       shell: bash
       run: |
+        echo '.'
         echo "Activating virtual environment '.venv'."
         source .venv/bin/activate
         echo "Installing flit with pip ..."
@@ -104,6 +108,7 @@ runs:
         FLIT_ROOT_INSTALL: 1
       shell: bash
       run: |
+        echo '.'
         if [[ "${INSTALL_LINTER_TOOLS}" == false ]] ; then
             echo "Installation of Linter tools not necessary."
         else
@@ -139,6 +144,7 @@ runs:
         FLIT_ROOT_INSTALL: 1
       shell: bash
       run: |
+        echo '.'
         if [[ "${INSTALL_PYTEST}" == false ]] ; then
             echo "Installing testing tools not necessary."
         else
@@ -154,6 +160,7 @@ runs:
       id: show-py-modules
       shell: bash
       run: |
+        echo '.'
         echo "All installed Python modules:"
         source .venv/bin/activate
         pip3 list --format columns

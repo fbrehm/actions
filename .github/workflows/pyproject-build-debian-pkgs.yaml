@@ -523,6 +523,13 @@ jobs:
           additional_locales: ${{ inputs.additional_locales }}
           install_flit: true
 
+      - name: "Installing necessary PIP modules."
+        uses: fbrehm/actions/.github/actions/pyproject-install-pip-modules@develop
+        with:
+          install_pytest: false
+          install_linter_tools: false
+          data_dir: ${{ inputs.data_dir }}
+
       - name: 'Creating man pages'
         id: create-man_pages
         shell: bash
