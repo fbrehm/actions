@@ -262,7 +262,6 @@ jobs:
       additional_rpm_build_packages: ${{ inputs.additional_rpm_build_packages }}
       debian_email: ${{ inputs.debian_email }}
       debian_fullname: ${{ inputs.debian_fullname }}
-      do_help2man: ${{ inputs.do_help2man }}
       el_versions: ${{ inputs.el_versions }}
       has_i18n: ${{ inputs.has_i18n }}
       key_id: ${{ inputs.key_id }}
