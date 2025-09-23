@@ -222,30 +222,32 @@ jobs:
     secrets:
       pypi_token: ${{ secrets.pypi_token }}
 
-  # ###########################
-  # build-debian-packages:
-  #   name: "Building Debian packages"
-  #   uses: ./.github/workflows/build-python-debian-packages.yaml
-  #   needs:
-  #     - exec-python-linter
-  #   with:
-  #     additional_debian_build_packages: ${{ inputs.additional_debian_build_packages }}
-  #     additional_locales: ${{ inputs.additional_locales }}
-  #     debian_email: ${{ inputs.debian_email }}
-  #     debian_fullname: ${{ inputs.debian_fullname }}
-  #     debian_versions: ${{ inputs.debian_versions }}
-  #     do_help2man: ${{ inputs.do_help2man }}
-  #     has_i18n: ${{ inputs.has_i18n }}
-  #     key_id: ${{ inputs.key_id }}
-  #     languages: ${{ inputs.languages }}
-  #     latest_debian_version: ${{ inputs.latest_debian_version }}
-  #     password_file: ${{ inputs.password_file }}
-  #     retention_days: ${{ inputs.retention_days }}
-  #     timezone: ${{ inputs.timezone }}
-  #   secrets:
-  #     key_password: ${{ secrets.key_password }}
-  #     private_key: ${{ secrets.private_key }}
-  #     public_key: ${{ secrets.public_key }}
+  ###########################
+  build-debian-packages:
+    name: "Building Debian packages"
+    uses: ./.github/workflows/pyproject-build-debian-pkgs.yaml
+    needs:
+      - exec-python-linter
+      - check-src
+    with:
+      additional_debian_build_packages: ${{ inputs.additional_debian_build_packages }}
+      additional_locales: ${{ inputs.additional_locales }}
+      debian_email: ${{ inputs.debian_email }}
+      debian_fullname: ${{ inputs.debian_fullname }}
+      debian_versions: ${{ inputs.debian_versions }}
+      has_i18n: ${{ inputs.has_i18n }}
+      key_id: ${{ inputs.key_id }}
+      languages: ${{ inputs.languages }}
+      latest_debian_version: ${{ inputs.latest_debian_version }}
+      password_file: ${{ inputs.password_file }}
+      retention_days: ${{ inputs.retention_days }}
+      timezone: ${{ inputs.timezone }}
+      entrypoints: ${{ needs.check-src.outputs.entrypoints }}
+      data_dir: ${{ needs.check-src.outputs.data_dir }}
+    secrets:
+      key_password: ${{ secrets.key_password }}
+      private_key: ${{ secrets.private_key }}
+      public_key: ${{ secrets.public_key }}
 
   # ###########################
   # build-rpm-packages:

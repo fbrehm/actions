@@ -1,0 +1,266 @@
+---
+
+name: "Building Debian packages of a pyproject source package."
+
+################################################################################
+# yamllint disable-line rule:truthy
+on:
+  workflow_call:
+    inputs:
+      debian_email:
+        description: 'The mail address of the user, which will be used to update debian/chagelog.'
+        type: string
+        default: 'frank@brehm-online.com'
+      debian_fullname:
+        description: 'A human readable name of the user, which will be used to update debian/chagelog.'
+        type: string
+        default: 'Frank Brehm'
+      has_i18n:
+        description: 'Does the package support localisation and internationalisation?'
+        type: boolean
+        default: true
+      languages:
+        description: 'A list of languages, which will be supported, if has_i18n is true.'
+        type: string
+        default: '["de_DE.UTF-8", "en_US.UTF-8"]'
+      additional_locales:
+        description: 'A whitespace separated list of additional locales (except en_US.UTF-8)'
+        type: string
+        default: 'de_DE.UTF-8'
+      latest_debian_version:
+        description: 'The short name of the latest stable Debian version.'
+        type: string
+        default: 'bookworm'
+      debian_versions:
+        description: 'Whitespace separated list of Debian and Ubuntu versions to build the package for.'
+        type: string
+        default: 'debian-bullseye debian-bookworm debian-trixie ubuntu-focal ubuntu-jammy ubuntu-noble'
+      additional_debian_build_packages:
+        description: "A withespace separated list of packages additional to the base build packages"
+        type: string
+      password_file:
+        description: 'The file containing the password of the private GPG key.'
+        type: string
+        default: '.private/uhu.txt'
+      key_id:
+        description: 'The ID of the used private GPG key.'
+        type: string
+      retention_days:
+        description: "The days for keeping the generated packages at GitHub."
+        type: number
+        default: 8
+      timezone:
+        description: "The timezone used for this job."
+        type: string
+        default: 'Europe/Berlin'
+      entrypoints:
+        description: "A whitespace separated list of entrypoints, which are converted to executable Python scripts."
+        type: string
+        default: ''
+      data_dir:
+        description: "The data directory for containing man pages, i18n files a.s.o."
+        type: string
+        default: ''
+    secrets:
+      public_key:
+        description: 'The exported public GPG key"'
+      private_key:
+        description: 'The exported private GPG key"'
+      key_password:
+        description: 'The password of the imported private GPG key.'
+
+################################################################################
+env:
+  DEBFULLNAME: ${{ inputs.debian_fullname }}
+  DEBEMAIL: ${{ inputs.debian_email }}
+  GIT_REF: ${{ github.ref }}
+  GIT_REFNAME: ${{ github.ref_name }}
+  GIT_REFTYPE: ${{ github.ref_type }}
+
+################################################################################
+jobs:
+
+  ###########################
+  define-debian-build-matrix:
+    name: "Define Debian build Matrix"
+    runs-on: ubuntu-latest
+    if: ${{ github.ref_name == 'main' || github.ref_name == 'master' || startsWith(github.ref_name, 'test') || github.ref_name == 'dev/workflow' || startsWith(github.ref_name, 'build') || startsWith(github.ref, 'refs/tags/')  }}
+    container: debian:${{ inputs.latest_debian_version }}
+    env:
+      DEBIAN_VERSIONS: ${{ inputs.debian_versions }}
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: "Update package lists"
+        id: apt-update
+        shell: bash
+        run: |
+          echo "::group::Update all package lists."
+          apt update --yes
+          echo "::endgroup::"
+
+      - name: "Install JQ"
+        shell: bash
+        run: |
+          if type -p jq >/dev/null; then
+              echo "The package jq is already installed."
+          else
+              echo "::group::Installing package 'jq' ..."
+              apt install --yes jq
+              echo "::endgroup::"
+          fi
+          echo -e "Version of JQ: $( jq --version )"
+
+      - name: "Defining the build-matrix"
+        id: set-matrix
+        shell: bash
+        run: |
+          if [[ -z "${DEBIAN_VERSIONS}" ]] ; then
+            echo "::error::No Debian or Ubuntu versions given for building packages."
+            exit 5
+          fi
+          matrix_json='{"include": ['
+          first_distro='y'
+
+          for deb_version in ${DEBIAN_VERSIONS}; do
+            deb_version_lc=$( echo "${deb_version}" | tr '[:upper:]' '[:lower:]' )
+            echo "Performing Debian version '${deb_version}' -> '${deb_version_lc}'"
+            case "${deb_version_lc}" in
+              debian-bullseye|bullseye|debian-11)
+                if [[ "${first_distro}" != 'y' ]] ; then
+                  matrix_json+=", "
+                fi
+                matrix_json+="{"
+                matrix_json+="\"title\": \"Debian 11 Bullseye\", "
+                matrix_json+="\"distributor\": \"Debian\", "
+                matrix_json+="\"os_codename\": \"bullseye\", "
+                matrix_json+="\"os_release\": \"11\", "
+                matrix_json+="\"container\": \"debian:bullseye\", "
+                matrix_json+="\"version_prefix\": \"deb11\", "
+                matrix_json+="\"compat\": \"12\""
+                matrix_json+="}"
+                echo "::notice title=Define Debian build matrix::Adding Debian 11 Bullseye"
+                ;;
+              debian-bookworm|bookworm|debian-12)
+                if [[ "${first_distro}" != 'y' ]] ; then
+                  matrix_json+=", "
+                fi
+                matrix_json+="{"
+                matrix_json+="\"title\": \"Debian 12 Bookworm\", "
+                matrix_json+="\"distributor\": \"Debian\", "
+                matrix_json+="\"os_codename\": \"bookworm\", "
+                matrix_json+="\"os_release\": \"12\", "
+                matrix_json+="\"container\": \"debian:bookworm\", "
+                matrix_json+="\"version_prefix\": \"deb12\", "
+                matrix_json+="\"compat\": \"12\""
+                matrix_json+="}"
+                echo "::notice title=Define Debian build matrix::Adding Debian 12 Bookworm"
+                ;;
+              debian-trixie|trixie|debian-13)
+                if [[ "${first_distro}" != 'y' ]] ; then
+                  matrix_json+=", "
+                fi
+                matrix_json+="{"
+                matrix_json+="\"title\": \"Debian 13 Trixie\", "
+                matrix_json+="\"distributor\": \"Debian\", "
+                matrix_json+="\"os_codename\": \"trixie\", "
+                matrix_json+="\"os_release\": \"13\", "
+                matrix_json+="\"container\": \"debian:trixie\", "
+                matrix_json+="\"version_prefix\": \"deb13\", "
+                matrix_json+="\"compat\": \"13\""
+                matrix_json+="}"
+                echo "::notice title=Define Debian build matrix::Adding Debian 13 Trixie"
+                ;;
+              debian-forky|forky|debian-14)
+                if [[ "${first_distro}" != 'y' ]] ; then
+                  matrix_json+=", "
+                fi
+                matrix_json+="{"
+                matrix_json+="\"title\": \"Debian 14 Forky\", "
+                matrix_json+="\"distributor\": \"Debian\", "
+                matrix_json+="\"os_codename\": \"forky\", "
+                matrix_json+="\"os_release\": \"14\", "
+                matrix_json+="\"container\": \"debian:forky\", "
+                matrix_json+="\"version_prefix\": \"deb14\", "
+                matrix_json+="\"compat\": \"14\""
+                matrix_json+="}"
+                echo "::notice title=Define Debian build matrix::Adding Debian 14 Forky"
+                ;;
+              debian-duke|duke|debian-15)
+                if [[ "${first_distro}" != 'y' ]] ; then
+                  matrix_json+=", "
+                fi
+                matrix_json+="{"
+                matrix_json+="\"title\": \"Debian 15 Duke\", "
+                matrix_json+="\"distributor\": \"Debian\", "
+                matrix_json+="\"os_codename\": \"duke\", "
+                matrix_json+="\"os_release\": \"15\", "
+                matrix_json+="\"container\": \"debian:duke\", "
+                matrix_json+="\"version_prefix\": \"deb15\", "
+                matrix_json+="\"compat\": \"15\""
+                matrix_json+="}"
+                echo "::notice title=Define Debian build matrix::Adding Debian 15 Duke"
+                ;;
+              ubuntu-focal|focal|ubuntu-20.04)
+                if [[ "${first_distro}" != 'y' ]] ; then
+                  matrix_json+=", "
+                fi
+                matrix_json+="{"
+                matrix_json+="\"title\": \"Ubuntu 20.04 Focal Fossa\", "
+                matrix_json+="\"distributor\": \"Ubuntu\", "
+                matrix_json+="\"os_codename\": \"focal\", "
+                matrix_json+="\"os_release\": \"20.04\", "
+                matrix_json+="\"container\": \"ubuntu:focal\", "
+                matrix_json+="\"version_prefix\": \"ubuntu20.04\", "
+                matrix_json+="\"compat\": \"12\""
+                matrix_json+="}"
+                echo "::notice title=Define Debian build matrix::Adding Ubuntu 20.04 Focal Fossa"
+                ;;
+              ubuntu-jammy|jammy|ubuntu-22.04)
+                if [[ "${first_distro}" != 'y' ]] ; then
+                  matrix_json+=", "
+                fi
+                matrix_json+="{"
+                matrix_json+="\"title\": \"Ubuntu 22.04 Jammy Jellyfish\", "
+                matrix_json+="\"distributor\": \"Ubuntu\", "
+                matrix_json+="\"os_codename\": \"jammy\", "
+                matrix_json+="\"os_release\": \"22.04\", "
+                matrix_json+="\"container\": \"ubuntu:jammy\", "
+                matrix_json+="\"version_prefix\": \"ubuntu22.04\", "
+                matrix_json+="\"compat\": \"12\""
+                matrix_json+="}"
+                echo "::notice title=Define Debian build matrix::Adding Ubuntu 22.04 Jammy Jellyfish"
+                ;;
+              ubuntu-noble|noble|ubuntu-24.04)
+                if [[ "${first_distro}" != 'y' ]] ; then
+                  matrix_json+=", "
+                fi
+                matrix_json+="{"
+                matrix_json+="\"title\": \"Ubuntu 24.04 Noble Numbat\", "
+                matrix_json+="\"distributor\": \"Ubuntu\", "
+                matrix_json+="\"os_codename\": \"noble\", "
+                matrix_json+="\"os_release\": \"24.04\", "
+                matrix_json+="\"container\": \"ubuntu:noble\", "
+                matrix_json+="\"version_prefix\": \"ubuntu24.04\", "
+                matrix_json+="\"compat\": \"12\""
+                matrix_json+="}"
+                echo "::notice title=Define Debian build matrix::Adding Ubuntu 24.04 Noble Numbat"
+                ;;
+              *)
+                echo "::error title=Define Debian build matrix::Unknown Debian or Ubuntu version '${deb_version}' given." >&2
+                exit 6
+                ;;
+            esac
+            first_distro='n'
+          done
+
+          matrix_json+="]}"
+
+          echo -e "Generated JSON:"
+          echo "${matrix_json}" | jq -C .
+
+          echo "matrix=${matrix_json}" >> ${GITHUB_OUTPUT}
+          echo "Using Matrix: $( cat ${GITHUB_OUTPUT} )"
+
+
+# vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list
