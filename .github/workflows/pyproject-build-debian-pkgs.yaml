@@ -385,14 +385,13 @@ jobs:
         shell: bash
         run: |
           PASSWORD_FILE_ABS=$( readlink --canonicalize-missing "${{ inputs.password_file }}" )
-          echo "Password file: '{PASSWORD_FILE_ABS}'
+          echo "Password file: '{PASSWORD_FILE_ABS}'"
 
           if [[ -e "${PASSWORD_FILE_ABS}" && -x "${SIGNING_HOOK_SCRIPT}" ]] ; then
-              echo "::notice title=build-debian-sorce-pkgs::Building signed Debian source package for ${PKG_NAME}-${PKG_VERSION}"
-              echo "::notice title=pyproject-build-debian-pkgs::Building signed Debian source package for ${PKG_NAME}-${PKG_VERSION}"
+              echo "::notice title=Build Debian source package::Building signed Debian source package for ${PKG_NAME}-${PKG_VERSION}"
               echo "y" | debuild --signing-hook="${SIGNING_HOOK_SCRIPT}" -S -i
           else
-              echo "::notice title=build-debian-source-package::Building unsigned Debian source package for ${PKG_NAME}-${PKG_VERSION}"
+              echo "::notice title=Build Debian source package::Building unsigned Debian source package for ${PKG_NAME}-${PKG_VERSION}"
               debuild -S -i --no-sign
           fi
 

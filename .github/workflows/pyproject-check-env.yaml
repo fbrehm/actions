@@ -212,9 +212,9 @@ jobs:
           echo "entrypoints=${ENTRYPOINTS}" >>"$GITHUB_OUTPUT"
 
           if [[ -n "${ENTRYPOINTS}" ]] ; then
-              echo "::notice::Found entrypoints: ${ENTRYPOINTS}"
+              echo "::notice title=Check environment::Found entrypoints: ${ENTRYPOINTS}"
           else
-              echo "::notice::Did not found any entrypoints."
+              echo "::notice title=Check environment::Did not found any entrypoints."
           fi
 
       - name: "Check for flit as build system"
@@ -236,7 +236,7 @@ jobs:
               exit 7
           fi
 
-          echo "::notice::Found build backend '${build_system}' in pyproject.toml."
+          echo "::notice title=Check environment::Found build backend '${build_system}' in pyproject.toml."
 
       - name: "Get directory for external data."
         id: get-data-dir
@@ -255,9 +255,9 @@ jobs:
           echo "data_dir=${DATA_DIR}" >>"$GITHUB_OUTPUT"
 
           if [[ -n "${DATA_DIR}" ]] ; then
-              echo "::notice::Found data directory: ${DATA_DIR}"
+              echo "::notice title=Check environment::Found data directory: ${DATA_DIR}"
           else
-              echo "::notice::Did not found data directory."
+              echo "::notice title=Check environment::Did not found data directory."
           fi
 
 # vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list
