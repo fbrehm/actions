@@ -545,6 +545,7 @@ jobs:
           echo "::group::Installing current package and hard dependencies ..."
           echo "Which flit: $( type -p flit )"
           flit install --deps production --python .venv/bin/python3
+          echo "::endgroup::"
 
           echo '.'
           echo "Directory '.venv/bin:"
@@ -666,11 +667,20 @@ jobs:
 
           echo '.'
           echo -e "Converting debian/changelog into RPM changelog format and appending it to ${SPECFILE}."
-          if [[ -n "${ENTRYPOINTS}" ]] ; then
-              if echo "${ENTRYPOINTS}" | grep -q -w 'dch2speclog' ; then
-                  source .venv/bin/activate
-                  echo "Current PATH: '${PATH}'"
-              fi
+          # if [[ -n "${ENTRYPOINTS}" ]] ; then
+          #     if echo "${ENTRYPOINTS}" | grep -q -w 'dch2speclog' ; then
+          #         source .venv/bin/activate
+          #         echo "Current PATH: '${PATH}'"
+          #     fi
+          # fi
+          echo '.'
+          echo "Directory '.venv/bin:"
+          ls -lA --color=always .venv/bin
+
+          if [[ -x .venv/bin/dch2speclog ]] ; then
+              echo "Activating virtual environment '.venv' ..."
+              source .venv/bin/activate
+              echo "Current PATH: '${PATH}'"
           fi
           echo "Which dch2speclog: $( type -p dch2speclog)"
           dch2speclog debian/changelog >> "${SPECFILE}"
