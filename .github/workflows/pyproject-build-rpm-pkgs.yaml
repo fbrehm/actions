@@ -104,7 +104,7 @@ env:
   GIT_REF: ${{ github.ref }}
   GIT_REFNAME: ${{ github.ref_name }}
   GIT_REFTYPE: ${{ github.ref_type }}
-  ENTRYOINTS: ${{ inputs.entrypoints }}
+  ENTRYPOINTS: ${{ inputs.entrypoints }}
 
 ################################################################################
 jobs:
@@ -253,7 +253,7 @@ jobs:
           echo "Updating GITHUB_ENV ..."
           export PKG_NAME=$( head -n 1 debian/changelog | awk '{print $1}' )
           export PKG_VERSION=$( head -n 1 debian/changelog | sed -e "s/^[^(]*(//" -e "s/).*//" )
-          export PKG_RELEASE=$( ./get-rpm-release )
+          export PKG_RELEASE="${{ inputs.revision }}"
           export PKG_BUILD_VERSION="${PKG_VERSION}-${PKG_RELEASE}"
           export OS_TITLE=$( cat /etc/os-release | grep '^PRETTY_NAME=' | sed -e 's/^PRETTY_NAME=//' -e 's/"//g' )
           export TZ="${{ inputs.timezone }}"
@@ -666,6 +666,12 @@ jobs:
                                   > "${SPECFILE}"
 
           echo '.'
+          echo "Adding changelog entry about building for EL ${{ matrix.el_version }}."
+          cur_date=$( LC_ALL=en_US.UTF-8 date +'%a %b %e %Y' )
+          echo "*  ${cur_date} ${DEBFULLNAME} <${DEBEMAIL}> ${PKG_VERSION}-${PKG_RELEASE}" >> "${SPECFILE}"
+          echo "-  Build RPM packages for Enterprise Linux ${{ matrix.el_version }}."      >> "${SPECFILE}"
+
+          echo '.'
           echo -e "Converting debian/changelog into RPM changelog format and appending it to ${SPECFILE}."
           if [[ -x .venv/bin/dch2speclog ]] ; then
               echo "Activating virtual environment '.venv' ..."
@@ -673,7 +679,7 @@ jobs:
               echo "Current PATH: '${PATH}'"
           fi
           echo "Which dch2speclog: $( type -p dch2speclog)"
-          dch2speclog debian/changelog >> "${SPECFILE}"
+          dch2speclog debian/changelog | grep -v '  ${cur_date} " >> "${SPECFILE}"
 
           echo '.'
           echo "::group::Generated '${SPECFILE}':"
@@ -735,6 +741,7 @@ jobs:
         run: |
           echo '.'
           echo "Finally creating RPMs ..."
+          echo "::notice title=Build RPM packages ${PKG_NAME} ${PKG_VERSION}-${PKG_RELEASE}"
 
           cmd="rpmbuild -ba --nocheck --verbose --define \"_topdir $(pwd)/rpmdir\" \"${SPECFILE}\""
           echo '.'
