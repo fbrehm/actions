@@ -53,12 +53,12 @@ jobs:
         uses: actions/checkout@v5
 
       - name: "Preparing the Debian container"
-        uses: fbrehm/actions/.github/actions/prepare-debian-container@develop
+        uses: fbrehm/actions/.github/actions/prepare-debian-container@main
         with:
           manage_locales: false
 
       - name: "Installing necessary PIP modules and linter tools."
-        uses: fbrehm/actions/.github/actions/pyproject-install-pip-modules@develop
+        uses: fbrehm/actions/.github/actions/pyproject-install-pip-modules@main
         with:
           install_linter_tools: true
           data_dir: ${{ inputs.data_dir }}
