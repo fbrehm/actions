@@ -1,0 +1,168 @@
+---
+name: Installing necessary PIP modules and Linting tools
+author: Frank Brehm
+description: Installing necessary PIP modules and Linting tools
+
+inputs:
+  install_pytest:
+    description: Should pytest be installed.
+    required: false
+    default: false
+    type: boolean
+  install_linter_tools:
+    description: Should linter tools like pylint, flake8, shellcheck a.s.o be installed.
+    required: false
+    default: false
+    type: boolean
+  install_py_venv_package:
+    description: 'Install the OS package python3-venv for creating the virtual environment'
+    required: false
+    default: false
+    type: boolean
+  data_dir:
+    description: "The data directory for containing man pages, i18n files a.s.o."
+    type: string
+    default: ''
+
+runs:
+  using: "composite"
+  steps:
+    - name: Show Python Environment
+      id: show-python
+      shell: bash
+      run: |
+        echo "Current Python version:"
+        python3 --version
+
+    - name: 'Ensure data directory'
+      id: ensure-data-dir
+      env:
+        DATA_DIR: ${{ inputs.data_dir }}
+      shell: bash
+      run: |
+        echo '.'
+        if [[ -n "${DATA_DIR}" ]] ; then
+            echo "Ensuring data directory '${DATA_DIR}/build' ..."
+            if [[ -d "${DATA_DIR}/build" ]] ; then
+                echo "Data directory '${DATA_DIR}/build' is already existing."
+            else
+                echo "Creating data directory '${DATA_DIR}/build' ..."
+                mkdir -p -v "${DATA_DIR}/build"
+            fi
+            base_name=$( echo "${{ github.repository }}" | sed -e 's|.*/||' )
+            base_name="${base_name}.${{ github.ref_name }}"
+            base_name=$( echo "${base_name}" | sed -e 's|//*|_|g' )
+            file_name="${DATA_DIR}/build/${base_name}"
+            echo "Creating '${file_name}' ..."
+            date --rfc-3339=seconds > "${file_name}"
+        else
+            echo "No data directory defined."
+        fi
+
+    - name: Creating Python virtual environment
+      id: create-venv
+      shell: bash
+      run: |
+        echo '.'
+        echo "Creating Python virtual environment '.venv' ..."
+        if [[ "${{ inputs.install_py_venv_package }}" == true ]] ; then
+            apt install python3-venv --yes
+        fi
+        python3 -m venv --system-site-packages .venv
+
+    - name: Upgrading Pip
+      id: pip-upgrade
+      shell: bash
+      run: |
+        echo '.'
+        echo "Activating virtual environment '.venv'."
+        source .venv/bin/activate
+        echo "Upgrading Pip."
+        echo "::group::PIP upgrade pip"
+        pip install --upgrade pip
+        echo "::endgroup::"
+
+    - name: Install Python Requirements
+      id: inst-requirements
+      env:
+        FLIT_ROOT_INSTALL: 1
+      shell: bash
+      run: |
+        echo '.'
+        echo "Activating virtual environment '.venv'."
+        source .venv/bin/activate
+        echo "Installing flit with pip ..."
+        echo "::group::PIP install flit"
+        pip install flit
+        echo "::endgroup::"
+        echo "Installing all necessary packages with flit ..."
+        echo "::group::Flit --only-deps --deps production ---python .venv/bin/python3"
+        flit install --only-deps --deps production --python .venv/bin/python3
+        echo "::endgroup::"
+
+    - name: Install linter tools
+      id: install-linter
+      if: ${{ inputs.install_linter_tools }}
+      env:
+        INSTALL_LINTER_TOOLS: ${{ inputs.install_linter_tools }}
+        FLIT_ROOT_INSTALL: 1
+      shell: bash
+      run: |
+        echo '.'
+        if [[ "${INSTALL_LINTER_TOOLS}" == false ]] ; then
+            echo "Installation of Linter tools not necessary."
+        else
+            echo "Installing shellcheck and yamllint ..."
+            if type -p apt >/dev/null; then
+                echo "::group::Executing: apt install --yes shellcheck yamllint"
+                apt install --yes shellcheck yamllint
+                echo "::endgroup::"
+            elif type -p dnf >/dev/null; then
+                echo "::group::Executing: dnf --assumeyes install ShellCheck yamllint"
+                dnf --assumeyes install ShellCheck yamllint
+                echo "::endgroup::"
+            elif type -p yum >/dev/null; then
+                echo "::group::Executing: yum --assumeyes install ShellCheck yamllint"
+                yum --assumeyes install ShellCheck yamllint
+                echo "::endgroup::"
+            else
+                echo "::error::Did not found apt, dnf or yum."
+                exit 5
+            fi
+            echo "Activating virtual environment '.venv'."
+            source .venv/bin/activate
+            echo "Installing linting modules with flit ..."
+            echo "::group::Flit install lint"
+            flit install --only-deps --deps production --extras lint --python .venv/bin/python3
+            echo "::endgroup::"
+        fi
+
+    - name: Install Pytest
+      id: install-pytest
+      env:
+        INSTALL_PYTEST: ${{ inputs.install_pytest }}
+        FLIT_ROOT_INSTALL: 1
+      shell: bash
+      run: |
+        echo '.'
+        if [[ "${INSTALL_PYTEST}" == false ]] ; then
+            echo "Installing testing tools not necessary."
+        else
+            echo "Activating virtual environment '.venv'."
+            source .venv/bin/activate
+            echo "Installing test modules with flit ..."
+            echo "::group::Flit install testing"
+            flit install --only-deps --deps production --extras testing --python .venv/bin/python3
+            echo "::endgroup::"
+        fi
+
+    - name: Show installed Python modules
+      id: show-py-modules
+      shell: bash
+      run: |
+        echo '.'
+        echo "All installed Python modules:"
+        source .venv/bin/activate
+        pip3 list --format columns
+
+# vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list

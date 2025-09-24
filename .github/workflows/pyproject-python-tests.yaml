@@ -1,0 +1,145 @@
+---
+
+name: "Execute pytest on a Python source package based on pyproject."
+
+################################################################################
+# yamllint disable-line rule:truthy
+on:
+  workflow_call:
+    inputs:
+      has_i18n:
+        description: 'Does the package support localisation and internationalisation?'
+        type: boolean
+        default: true
+      test_python_versions:
+        description: 'A list of Python versions, for which the package should be tested.'
+        type: string
+        default: '["3.9", "3.10", "3.11", "3.12", "3.13"]'
+      latest_debian_version:
+        description: 'The short name of the latest stable Debian version.'
+        type: string
+        default: 'bookworm'
+      additional_locales:
+        description: 'A whitespace separated list of additional locales (except en_US.UTF-8)'
+        type: string
+        default: 'de_DE.UTF-8'
+      entrypoints:
+        description: "A whitespace separated list of entrypoints, which are converted to executable Python scripts."
+        type: string
+        default: ''
+      data_dir:
+        description: "The data directory for containing man pages, i18n files a.s.o."
+        type: string
+        default: ''
+
+################################################################################
+jobs:
+
+  ###########################
+  define-test-matrix:
+    name: "Defining the Python Test matrix"
+    runs-on: ubuntu-latest
+    container: debian:${{ inputs.latest_debian_version }}
+    env:
+      PYTHON_VERSIONS: ${{ inputs.test_python_versions }}
+      ADDITIONAL_LOCALES: ${{ inputs.additional_locales }}
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: "Update package lists"
+        id: apt-update
+        shell: bash
+        run: |
+          echo "Update all package lists."
+          apt update --yes
+
+      - name: "Install JQ"
+        shell: bash
+        run: |
+          if type -p jq >/dev/null; then
+              echo "The package jq is already installed."
+          else
+              echo "::group::Installing package 'jq' ..."
+              apt install --yes jq
+              echo "::endgroup::"
+          fi
+          echo -e "Version of JQ: $( jq --version )"
+
+      - name: Defining the Test-Matrix
+        id: set-matrix
+        shell: bash
+        run: |
+          if [[ -z "${{ inputs.test_python_versions }}" ]] ; then
+            echo "::error::No Python versions given for creating the Python test matrix"
+            exit 5
+          fi
+
+          TEST_LOCALES='["en_US.utf8"'
+          if [[ -n "${ADDITIONAL_LOCALES}" ]] ; then
+              for locale in ${ADDITIONAL_LOCALES} ; do
+                  TEST_LOCALES+=", \"${locale}\""
+              done
+          fi
+          TEST_LOCALES+="]"
+
+          matrix_json="{"
+          matrix_json+="\"python_version\": ${PYTHON_VERSIONS}, "
+          matrix_json+="\"locale\": ${TEST_LOCALES}"
+          matrix_json+="}"
+
+          echo -e "\nGenerated raw JSON: ${matrix_json}"
+
+          echo -e "\nGenerated JSON:"
+          echo "${matrix_json}" | jq -C .
+
+          echo "matrix=${matrix_json}" >> ${GITHUB_OUTPUT}
+          echo "::debug::Using Matrix: $( cat ${GITHUB_OUTPUT} )"
+
+  ###########################
+  test:
+    name: 'Exec Python-${{ matrix.python_version }} and locale "${{ matrix.locale }}" tests.'
+    runs-on: ubuntu-latest
+    needs: define-test-matrix
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.define-test-matrix.outputs.matrix) }}
+    container: python:${{ matrix.python_version }}
+    steps:
+      - name: "Checking out sources."
+        uses: actions/checkout@v5
+
+      - name: "Show Environment"
+        shell: bash
+        run: |
+          echo "::group::Bash enviroment:"
+          env | sort
+          echo "::endgroup::"
+          echo -e "."
+          echo "::notice title=Execute Python tests::Testing Python version: $( python --version ) and locale '${{ matrix.locale }}'"
+
+      - name: "Preparing the Debian container for locale '${{ matrix.locale }}'"
+        uses: fbrehm/actions/.github/actions/prepare-debian-container@develop
+        with:
+          manage_locales: ${{ inputs.has_i18n }}
+          additional_locales: '${{ matrix.locale }}'
+
+      - name: "Compiling i18n files ..."
+        id: compile-i18n
+        uses: fbrehm/actions/.github/actions/compile-locales@develop
+        with:
+          to_data_dir: false
+
+      - name: "Installing PIP modules and linter tools"
+        uses: fbrehm/actions/.github/actions/pyproject-install-pip-modules@develop
+        with:
+          install_pytest: true
+          data_dir: ${{ inputs.data_dir }}
+
+      - name: Executing PyTest for Python ${{ matrix.python_version }} and locale ${{ matrix.locale }}
+        shell: bash
+        run: |
+          echo "Executing pytest:"
+          source .venv/bin/activate
+          pytest --verbose
+
+# vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list

@@ -1,0 +1,202 @@
+---
+
+name: "Execute linter tests on a Python source package."
+
+################################################################################
+# yamllint disable-line rule:truthy
+on:
+  workflow_call:
+    inputs:
+      latest_python_version:
+        description: "The latest Python version for executing linter tests."
+        type: string
+        default: "3.12"
+      libdir:
+        description: "The directory in the workdir where the Python modules are located."
+        type: string
+        required: true
+        default: 'src'
+      additional_files_flake8:
+        description: "Files or directories to check with flake8 additional to standard files and directories."
+        type: string
+      additional_scripts_shellcheck:
+        description: "Files or directories to check with shellcheck additional to standard files and directories."
+        type: string
+      additional_paths_yamllint:
+        description: "Files or directories to check with yamllint additional to standard files and directories."
+        type: string
+      entrypoints:
+        description: "A whitespace separated list of entrypoints, which are converted to executable Python scripts."
+        type: string
+        default: ''
+      data_dir:
+        description: "The data directory for containing man pages, i18n files a.s.o."
+        type: string
+        default: 'src'
+
+################################################################################
+jobs:
+
+  ###########################
+  linter:
+    runs-on: ubuntu-latest
+    name: Executing Linters
+    container: python:${{ inputs.latest_python_version }}
+    env:
+      LIBDIR: ${{ inputs.libdir }}
+      INDEX_FILE: ${{ inputs.libdir }}/__init__.py
+      ADDITIONAL_FILES_FLAKE8: ${{ inputs.additional_files_flake8 }}
+      ADDITIONAL_FILES_SHELLCHECK: ${{ inputs.additional_scripts_shellcheck }}
+      ADDITIONAL_PATHS_YAMLLINT: ${{ inputs.additional_paths_yamllint }}
+    steps:
+      - name: "Checking out the sources."
+        uses: actions/checkout@v5
+
+      - name: "Preparing the Debian container"
+        uses: fbrehm/actions/.github/actions/prepare-debian-container@develop
+        with:
+          manage_locales: false
+
+      - name: "Installing necessary PIP modules and linter tools."
+        uses: fbrehm/actions/.github/actions/pyproject-install-pip-modules@develop
+        with:
+          install_linter_tools: true
+          data_dir: ${{ inputs.data_dir }}
+
+      - name: "Show Environment"
+        shell: bash
+        run: |
+          echo "Bash enviroment:"
+          env
+
+      - name: Checking validity of libdir ${[ inputs.libdir }}.
+        shell: bash
+        run: |
+          echo "Checking for directory '${LIBDIR}':"
+          if [[ ! -d "${LIBDIR}" ]] ; then
+              echo "::error::Python libdir '${LIBDIR}' does not exists."
+              exit 6
+          fi
+          echo "ok."
+          echo "Checking for file '${INDEX_FILE}':"
+          if [[ ! -f "${INDEX_FILE}" ]] ; then
+              echo "::error::Python package index file '${INDEX_FILE}' does not exists."
+              exit 6
+          fi
+          echo "ok."
+
+      - name: "Checking module version against tag."
+        shell: bash
+        run: |
+          echo "Get package version from '${INDEX_FILE}' ..."
+          PACKAGE_VERSION=$( cat "${INDEX_FILE}" | grep -P '^__version__(\s|=)' | sed -e "s/^[^'\"]*['\"]//"  -e "s/['\"][ »]*\$//" )
+          echo "::notice title=Execute linter tests::Package version: '${PACKAGE_VERSION}'"
+          if [[ "${GITHUB_REF_TYPE}" == 'tag' ]] ; then
+              if [[ "${PACKAGE_VERSION}" == "${GITHUB_REF_NAME}" ]] ; then
+                  echo "Tag and package version '${GITHUB_REF_NAME}' are okay."
+              else
+                  echo "::error::Tag '${GITHUB_REF_NAME}' does not match package version '${PACKAGE_VERSION}'"
+                  exit 5
+              fi
+          fi
+
+      - name: Comparing package version in debian/changlog and in __init__.py.
+        shell: bash
+        run: |
+          echo "Getting package version from '${INDEX_FILE}' ..."
+          PACKAGE_VERSION=$( cat "${INDEX_FILE}" | grep -P '^__version__(\s|=)' | sed -e "s/^[^'\"]*['\"]//"  -e "s/['\"][ 	]*\$//" )
+          echo "Package version: '${PACKAGE_VERSION}'"
+          if [[ -f debian/changelog ]] ; then
+              DEBIAN_PKG_VERSION=$( head -n 1 debian/changelog | sed -e 's/^[^(]*(//' -e 's/).*//' )
+              echo "Debian package version: '${DEBIAN_PKG_VERSION}'"
+              if [[ "${PACKAGE_VERSION}" == "${DEBIAN_PKG_VERSION}" ]] ; then
+                  echo "Debian package version and package version '${DEBIAN_PKG_VERSION}' are matching."
+              else
+                  echo "::error::Debian package version '${DEBIAN_PKG_VERSION}' does not match package version '${PACKAGE_VERSION}'" >&2
+                  exit 5
+              fi
+          else
+              echo "::error::File 'debian/changelog' not found." >&2
+              exit 7
+          fi
+
+      - name: Execute Flake 8
+        shell: bash
+        run: |
+          PATHS_TO_CHECK="${LIBDIR}"
+
+          if [[ -d "bin" ]] ; then
+              PATHS_TO_CHECK+=" bin/*"
+          fi
+
+          if [[ -f setup.py ]] ; then
+              PATHS_TO_CHECK+=" setup.py"
+          fi
+
+          if [[ -d test ]] ; then
+              PATHS_TO_CHECK+=" test"
+          fi
+
+          if [[ -n "${ADDITIONAL_FILES_FLAKE8}" ]] ; then
+              PATHS_TO_CHECK+=" ${ADDITIONAL_FILES_FLAKE8}"
+          fi
+
+          source .venv/bin/activate
+          echo "Flake8 version:"
+          flake8 --version
+
+          echo "Executing flake8 on:"
+          for path in ${PATHS_TO_CHECK} ; do
+              echo " * ${path}"
+          done
+          flake8 ${PATHS_TO_CHECK}
+
+      - name: Execute Shellcheck
+        shell: bash
+        run: |
+          shellscripts=""
+          for script in compile-xlate-msgs.sh \
+                        update-env.sh \
+                        xtract-xlate-msgs.sh \
+                        get-debian-release \
+                        get-debian-version \
+                        get-rpm-release \
+                        get-rpm-version ${ADDITIONAL_FILES_SHELLCHECK}; do
+              if [[ -f "${script}" ]] ; then
+                  if [[ -z "${shellscripts}" ]] ; then
+                      shellscripts="${script}"
+                  else
+                      shellscripts+=" ${script}"
+                  fi
+              fi
+          done
+
+          echo -n "Version of shellcheck: "; shellcheck --version
+          if [[ -n "${shellscripts}" ]] ; then
+              echo "Checking with shellcheck:"
+              for script in ${shellscripts} ; do
+                  echo " * ${script}"
+              done
+              echo "shellcheck -x ${shellscripts}"
+              shellcheck -x ${shellscripts}
+          else
+              echo "No shell scripts for checking found."
+          fi
+
+      - name: Execute Yamllint
+        shell: bash
+        run: |
+          yamlfiles=""
+          for yamlfile in .github .gitlab-ci.yml ${ADDITIONAL_PATHS_YAMLLINT} ; do
+            if [[ -e "${yamlfile}" ]] ; then
+              if [[ -z "${yamlfiles}" ]] ; then
+                yamlfiles="${yamlfile}"
+              else
+                yamlfiles+=" ${yamlfile}"
+              fi
+            fi
+          done
+          echo -e "Checking with yamllint: ${yamlfiles}"
+          yamllint ${yamlfiles}
+
+# vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list

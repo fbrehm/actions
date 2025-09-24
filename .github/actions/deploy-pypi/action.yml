@@ -1,0 +1,212 @@
+name: PyPI Deployment
+author: Casper da Costa-Luis
+description: Securely build and upload Python distributions to PyPI
+
+inputs:
+  user:
+    description: PyPI username
+    required: false
+    default: __token__
+  password:
+    description: PyPI password or API token
+    required: false
+  registry_domain:
+    description: PyPI trusted publisher URL
+    required: false
+    default: https://upload.pypi.org
+  requirements:
+    description: Packages to `pip install` before building
+    required: false
+    default: twine wheel build
+  setup:
+    description: '`setup.py` command to run ("true" is a shortcut for "clean sdist -d <dist_dir> bdist_wheel -d <dist_dir>")'
+    required: false
+    default: false
+  build:
+    description: '`python -m build` command to run ("true" is a shortcut for "-o <dist_dir>")'
+    required: false
+    default: false
+  pip:
+    description: '`pip` command to run ("true" is a shortcut for "wheel -w <dist_dir> --no-deps .")'
+    required: false
+    default: false
+  check:
+    description: Whether to run basic checks on the built files
+    required: false
+    default: true
+  upload:
+    description: Whether to upload
+    required: false
+    default: true
+  dist_dir:
+    description: Directory containing distributions
+    required: false
+    default: dist
+  url:
+    description: Destination repository (package index) URL
+    required: false
+  attestations:
+    description: 'Use PEP 740 attestations if `upload`ing to a trusted publisher `registry_domain`'
+    required: false
+    default: true
+  gpg_key:
+    description: GPG key to import for signing
+    required: false
+  skip_existing:
+    description: Continue uploading files if one already exists
+    required: false
+    default: false
+
+outputs:
+  whl:
+    description: Basename of *.whl for upload
+    value: ${{ steps.upload.outputs.whl }}
+  targz:
+    description: Basename of *.tar.gz for upload
+    value: ${{ steps.upload.outputs.targz }}
+  whl_asc:
+    description: Basename of *.whl.asc for upload (requires <gpg_key>)
+    value: ${{ steps.upload.outputs.whl_asc }}
+  targz_asc:
+    description: Basename of *.tar.gz.asc for upload (requires <gpg_key>)
+    value: ${{ steps.upload.outputs.targz_asc }}
+
+runs:
+  using: composite
+  steps:
+    - name: build
+      shell: bash
+      env:
+        INPUT_REQUIREMENTS: ${{ inputs.requirements }}
+        INPUT_SETUP: ${{ inputs.setup }}
+        INPUT_BUILD: ${{ inputs.build }}
+        INPUT_PIP: ${{ inputs.pip }}
+        INPUT_DIST_DIR: ${{ inputs.dist_dir }}
+        ACTIONS_ID_TOKEN_REQUEST_TOKEN: ""
+      run: |
+        echo "Current directory: $( pwd )"
+        echo "Directory listing:"
+        ls -lA
+
+        if [[ -n "${INPUT_REQUIREMENTS}" && "${INPUT_SETUP}${INPUT_BUILD}${INPUT_PIP}" != falsefalsefalse ]]; then
+            echo "::group::Executing: python -m pip install ${INPUT_REQUIREMENTS}"
+            python -m pip install $INPUT_REQUIREMENTS
+            echo "::endgroup::"
+        fi
+
+        if [[ "${INPUT_PIP}" == true ]]; then
+            echo "::group::Executing: python -m pip wheel -w \"${INPUT_DIST_DIR}\" --no-deps ."
+            python -m pip wheel -w "${INPUT_DIST_DIR}" --no-deps .
+            echo "::endgroup::"
+        elif [[ "${INPUT_PIP}" != false ]]; then
+            echo "::group::Executing: python -m pip ${INPUT_PIP}"
+            python -m pip $INPUT_PIP
+            echo "::endgroup::"
+        fi
+
+        if [[ "${INPUT_BUILD}" == build* || "${INPUT_BUILD}" == [bs]dist* || "${INPUT_BUILD}" == clean* ]]; then
+            echo '::warning title=deploy-pypi::assuming `with.setup` instead of `with.build`'
+            echo "::group::Executing: python setup.py ${INPUT_BUILD}"
+            python setup.py ${INPUT_BUILD}
+            echo "::endgroup::"
+        elif [[ "${INPUT_BUILD}" == true ]]; then
+            echo "::group::Executing: python -m pip install build"
+            python -m pip install build
+            echo "::endgroup::"
+            echo "::group::Executing: python -m build -o \"${INPUT_DIST_DIR}\""
+            python -m build -o "${INPUT_DIST_DIR}"
+            echo "::endgroup::"
+        elif [[ "${INPUT_BUILD}" != false ]]; then
+            echo "::group::Executing: python -m pip install build"
+            python -m pip install build
+            echo "::endgroup::"
+            echo "::group::Executing: python -m build ${INPUT_BUILD}"
+            python -m build ${INPUT_BUILD}
+            echo "::endgroup::"
+        fi
+
+        if [[ "${INPUT_SETUP}" == true ]]; then
+            echo "::group::Executing: python setup.py sdist -d \"${INPUT_DIST_DIR}\" bdist_wheel -d \"${INPUT_DIST_DIR}\""
+            python setup.py sdist -d "${INPUT_DIST_DIR}" bdist_wheel -d "${INPUT_DIST_DIR}"
+            echo "::endgroup::"
+        elif [[ "${INPUT_SETUP}" != false ]]; then
+            echo "::group::Executing: python setup.py ${INPUT_SETUP}"
+            python setup.py ${INPUT_SETUP}
+            echo "::endgroup::"
+        fi
+
+    - name: check
+      shell: bash
+      env:
+        INPUT_DIST_DIR: ${{ inputs.dist_dir }}
+        INPUT_CHECK: ${{ inputs.check }}
+        ACTIONS_ID_TOKEN_REQUEST_TOKEN: ""
+      run: |
+        if [[ "$INPUT_CHECK" == true ]]; then
+            echo "Executing Python twine ..."
+            echo "::group::Executing: python -m pip install twine"
+            python -m pip install twine
+            echo "::endgroup::"
+            echo "::group::Executing: python -m twine check \"${INPUT_DIST_DIR%%/}\"/*"
+            python -m twine check "${INPUT_DIST_DIR%%/}"/*
+            echo "::endgroup::"
+        else
+            echo "Twine checks will not be executed."
+        fi
+
+    - id: upload
+      name: upload
+      shell: bash
+      env:
+        INPUT_UPLOAD: ${{ inputs.upload }}
+        INPUT_DIST_DIR: ${{ inputs.dist_dir }}
+        INPUT_GPG_KEY: ${{ inputs.gpg_key }}
+        INPUT_SKIP_EXISTING: ${{ inputs.skip_existing }}
+        TWINE_REPOSITORY_URL: ${{ inputs.url }}
+        TWINE_USERNAME: ${{ inputs.user }}
+        TWINE_PASSWORD: ${{ inputs.password }}
+        INPUT_REGISTRY_DOMAIN: ${{ inputs.registry_domain }}
+        INPUT_ATTESTATIONS: ${{ inputs.attestations }}
+      run: |
+        DIST="${INPUT_DIST_DIR%%/}"
+        if [[ "$INPUT_UPLOAD" == true ]]; then
+            TWINE_OPTS=""
+            if [[ -n "$INPUT_GPG_KEY" ]]; then
+                gpg --import <(echo "$INPUT_GPG_KEY")
+                TWINE_OPTS="$TWINE_OPTS -s --sign-with gpg"
+            fi
+            if [[ "$INPUT_SKIP_EXISTING" == true ]]; then
+                TWINE_OPTS="$TWINE_OPTS --skip-existing"
+            fi
+            echo "::group::Executing: python -m pip install twine"
+            python -m pip install twine
+            echo "::endgroup::"
+            if [[ -z "$TWINE_PASSWORD" ]]; then
+                # vis https://docs.pypi.org/trusted-publishers/using-a-publisher/#the-manual-way
+                oidc_token=$(curl -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=pypi" | jq -r '.value')
+                export TWINE_PASSWORD=$(curl $INPUT_REGISTRY_DOMAIN/_/oidc/mint-token -d "{\"token\": \"${oidc_token}\"}" | jq -r '.token')
+                echo "::add-mask::$TWINE_PASSWORD"
+                if [[ "$INPUT_ATTESTATIONS" == true ]]; then
+                    echo "::group::Executing: python -m pip install 'twine>=5.1' pypi-attestations"
+                    python -m pip install 'twine>=5.1' pypi-attestations
+                    echo "::endgroup::"
+                    echo "::group::Executing: python -m pypi_attestations sign ..."
+                    python -m pypi_attestations sign "${DIST}"/*
+                    echo "::endgroup::"
+                fi
+                TWINE_OPTS="$TWINE_OPTS --attestations"
+            fi
+            echo "::group::Executing:python -m twine upload ${TWINE_OPTS} ..."
+            python -m twine upload $TWINE_OPTS "${DIST}"/*
+            echo "::endgroup::"
+        fi
+        pushd "${DIST}"
+        echo "whl=$( (ls *.whl || :) | tr '\n' ' ' | sed 's/ *$//' )" >> $GITHUB_OUTPUT
+        echo "whl_asc=$( (ls *.whl.asc || :) | tr '\n' ' ' | sed 's/ *$//' )" >> $GITHUB_OUTPUT
+        echo "targz=$(ls *.tar.gz || :)" >> $GITHUB_OUTPUT
+        echo "targz_asc=$(ls *.tar.gz.asc || :)" >> $GITHUB_OUTPUT
+        popd
+
+branding:
+  icon: upload-cloud
+  color: blue

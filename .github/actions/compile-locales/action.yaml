@@ -1,0 +1,54 @@
+---
+name: Compiling locales files
+author: Frank Brehm
+description: Compiling locales files (*.po) to *.mo files.
+
+inputs:
+  source_dir:
+    description: "The directory containing the source locale files (*.po files)."
+    required: false
+    type: string
+    default: 'locale'
+  data_dir:
+    description: "The data directory for containing man pages, i18n files a.s.o."
+    type: string
+    default: 'data'
+  to_data_dir:
+    description: "Should the *.mo files be generated below the data dir or in the same dir as their sources?"
+    required: false
+    type: boolean
+    default: false
+
+runs:
+  using: "composite"
+  steps:
+    - name: 'Compiling locales files.'
+      id: compile-locales
+      shell:
+      run: |
+        if [[ ! -d "${{ inputs.source_dir }}" ]] ; then
+            echo "Compiling gettext locale files in directory '${{ inputs.source_dir }}' ..."
+            target_root="${{ inputs.source_dir }}"
+            if [[ -n "${{ inputs.data_dir }}" && "${{ inputs.to_data_dir }}" == true ]] ; then
+                target_root="${{ inputs.data_dir }}/share/locale"
+            fi
+
+            echo "Ensuring directory '${target_root}' ..."
+            mkdir -pv "${target_root}"
+
+            echo "Compiling:"
+            for locale_file in $( find "${{ inputs.source_dir }}" -type f -name '*.po' ) ; do
+                base_stem=$( basename --suffix '.po' "${locale_file}" )
+                dir_name=$( dirname "${locale_file}" )
+                target_dir="${target_root}/${dir_name#locale/}"
+                target_mo_file="${target_dir}/${base_stem}.mo"
+                echo " * '${locale_file}' => '${target_mo_file}' ..."
+                printf '   '
+                msgfmt --statistics --output-file "${target_mo_file}" "${locale_file}"
+            done
+
+        else
+            echo "No generation of locale files possible, source directory '${{ inputs.source_dir }}' does not exists."
+        fi
+
+# vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list
