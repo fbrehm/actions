@@ -632,9 +632,14 @@ jobs:
           echo "Ensuring RPM source dir '${RPM_SRC_DIR}' ..."
           mkdir -pv "${RPM_SRC_DIR}"
 
+
           echo '.'
           echo "Copy sources recursive into '${RPM_SRC_DIR}' ..."
           tar cf - ${root_objects} | (cd "${RPM_SRC_DIR}" ; tar xf -)
+
+          echo '.'
+          echo "Removing for RPM pointless directory 'data/build' ..."
+          rm -rfv "${RPM_SRC_DIR}/data/build"
 
           tarball_base="${PKG_NAME}.${PKG_VERSION}.tar.gz"
           tarball="rpmdir/SOURCES/${tarball_base}"
@@ -668,8 +673,8 @@ jobs:
           echo '.'
           echo "Adding changelog entry about building for EL ${{ matrix.el_version }}."
           cur_date=$( LC_ALL=en_US.UTF-8 date +'%a %b %e %Y' )
-          echo "*  ${cur_date} ${DEBFULLNAME} <${DEBEMAIL}> ${PKG_VERSION}-${PKG_RELEASE}" >> "${SPECFILE}"
-          echo "-  Build RPM packages for Enterprise Linux ${{ matrix.el_version }}."      >> "${SPECFILE}"
+          echo "*   ${cur_date} ${DEBFULLNAME} <${DEBEMAIL}> ${PKG_VERSION}-${PKG_RELEASE}" >> "${SPECFILE}"
+          echo "-   Build RPM packages for Enterprise Linux ${{ matrix.el_version }}."      >> "${SPECFILE}"
 
           echo '.'
           echo -e "Converting debian/changelog into RPM changelog format and appending it to ${SPECFILE}."
@@ -679,7 +684,7 @@ jobs:
               echo "Current PATH: '${PATH}'"
           fi
           echo "Which dch2speclog: $( type -p dch2speclog)"
-          dch2speclog debian/changelog | grep -v "  ${cur_date} " >> "${SPECFILE}"
+          dch2speclog debian/changelog | grep -v "   ${cur_date} " >> "${SPECFILE}"
 
           echo '.'
           echo "::group::Generated '${SPECFILE}':"
