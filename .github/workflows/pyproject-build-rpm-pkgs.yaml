@@ -746,7 +746,7 @@ jobs:
         run: |
           echo '.'
           echo "Finally creating RPMs ..."
-          echo "::notice title=Build RPM packages ${PKG_NAME} ${PKG_VERSION}-${PKG_RELEASE}"
+          echo "::notice title=Build RPM packages::Building packages '${PKG_NAME} ${PKG_VERSION}-${PKG_RELEASE}'"
 
           cmd="rpmbuild -ba --nocheck --verbose --define \"_topdir $(pwd)/rpmdir\" \"${SPECFILE}\""
           echo '.'
