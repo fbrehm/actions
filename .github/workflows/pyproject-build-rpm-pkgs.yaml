@@ -524,6 +524,32 @@ jobs:
           eval ${cmd}
           echo "::endgroup::"
 
+      - name: "Ensure Python virtual env '.venv'"
+        id: ensure-venv
+        shell: bash
+        env:
+          FLIT_ROOT_INSTALL: 1
+        run: |
+          echo '.'
+          echo "Ensuring Python virtual environment '.venv' ..."
+
+          if [[ ! -d '.venv' ]] ; then
+              echo "::error title=Build RPM packages::Python virtual environment '.venv' does not exixsts."
+              exit 8
+          fi
+
+          source .venv/bin/activate
+          echo "Current PATH: '${PATH}'"
+
+          echo '.'
+          echo "::group::Installing current package and hard dependencies ..."
+          echo "Which flit: $( type -p flit )"
+          flit install --deps production --python .venv/bin/python3
+
+          echo '.'
+          echo "Directory '.venv/bin:"
+          ls -lA --color=always .venv/bin
+
       - name: 'Creating man pages'
         id: create-man-pages
         shell: bash
@@ -549,6 +575,7 @@ jobs:
               echo "::group::Installing click-man ..."
               pip3 install click-man
               echo "::endgroup::"
+              echo "Which click-man: $( type -p click-man)"
 
               for entrypoint in ${ENTRYPOINTS}; do
                   echo '.'
@@ -625,6 +652,7 @@ jobs:
         run: |
           echo '.'
           echo "Creating spec file '${SPECFILE}' ..."
+
           template="${{ inputs.template_specfile }}"
           if [[ "${SPECFILE}" == "${{ inputs.template_specfile }}" ]] ; then
               template="${{ inputs.template_specfile }}.bak0"
@@ -641,8 +669,10 @@ jobs:
           if [[ -n "${ENTRYPOINTS}" ]] ; then
               if echo "${ENTRYPOINTS}" | grep -q -w 'dch2speclog' ; then
                   source .venv/bin/activate
+                  echo "Current PATH: '${PATH}'"
               fi
           fi
+          echo "Which dch2speclog: $( type -p dch2speclog)"
           dch2speclog debian/changelog >> "${SPECFILE}"
 
           echo '.'

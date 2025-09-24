@@ -67,7 +67,7 @@ on:
       el_versions:
         description: 'Whitespace separated list of Enterprise Linux versions to build the package for.'
         type: string
-        default: 'el-9'
+        default: 'el-9 el-10'
       additional_debian_build_packages:
         description: "A withespace separated list of Debian packages additional to the base build packages"
         type: string
@@ -284,27 +284,27 @@ jobs:
       private_key: ${{ secrets.private_key }}
       public_key: ${{ secrets.public_key }}
 
-  # ###########################
-  # deploy-to-repos:
-  #   name: "Deployment of all OS packages to the own repo server"
-  #   uses: ./.github/workflows/deploy-to-reposerver.yaml
-  #   needs:
-  #     - build-debian-packages
-  #     - build-rpm-packages
-  #     - deploy-to-pypi
-  #   with:
-  #     repo_dir: ${{ inputs.repo_dir }}
-  #     smtp_server_address: ${{ inputs.smtp_server_address }}
-  #     smtp_server_port: ${{ inputs.smtp_server_port }}
-  #     smtp_protocol: ${{ inputs.smtp_protocol }}
-  #     smtp_sender_address: ${{ inputs.smtp_sender_address }}
-  #     smtp_recipient_addresses: ${{ inputs.smtp_recipient_addresses }}
-  #   secrets:
-  #     repo_server: ${{ secrets.repo_server }}
-  #     repo_user: ${{ secrets.repo_user }}
-  #     ssh_private_key: ${{ secrets.ssh_private_key }}
-  #     smtp_user: ${{ secrets.smtp_user }}
-  #     smtp_password: ${{ secrets.smtp_password }}
+  ###########################
+  deploy-to-repos:
+    name: "Deployment of all OS packages to the own repo server"
+    uses: ./.github/workflows/deploy-to-reposerver.yaml
+    needs:
+      - build-debian-packages
+      - build-rpm-packages
+      - deploy-to-pypi
+    with:
+      repo_dir: ${{ inputs.repo_dir }}
+      smtp_server_address: ${{ inputs.smtp_server_address }}
+      smtp_server_port: ${{ inputs.smtp_server_port }}
+      smtp_protocol: ${{ inputs.smtp_protocol }}
+      smtp_sender_address: ${{ inputs.smtp_sender_address }}
+      smtp_recipient_addresses: ${{ inputs.smtp_recipient_addresses }}
+    secrets:
+      repo_server: ${{ secrets.repo_server }}
+      repo_user: ${{ secrets.repo_user }}
+      ssh_private_key: ${{ secrets.ssh_private_key }}
+      smtp_user: ${{ secrets.smtp_user }}
+      smtp_password: ${{ secrets.smtp_password }}
 
 
 # vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list
