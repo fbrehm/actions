@@ -257,7 +257,7 @@ jobs:
           export PKG_BUILD_VERSION="${PKG_VERSION}-${PKG_RELEASE}"
           export OS_TITLE=$( cat /etc/os-release | grep '^PRETTY_NAME=' | sed -e 's/^PRETTY_NAME=//' -e 's/"//g' )
           export TZ="${{ inputs.timezone }}"
-          export RPM_SRC_DIR_BASE="${PYTHON}_${PKG_NAME}-${PKG_VERSION}"
+          export RPM_SRC_DIR_BASE="${PYTHON}-${PKG_NAME}-${PKG_VERSION}"
           export RPM_SRC_DIR="rpmdir/SOURCES/${RPM_SRC_DIR_BASE}"
           export SPECFILE="${PKG_NAME}.spec"
           export SPECFILE_TEMPLATE="template.spec"
@@ -621,7 +621,7 @@ jobs:
           mkdir -pv rpmdir/SOURCES
 
           workdir=$(pwd)
-          root_objects=$( ls -A1 | egrep -vw ".git|rpmdir" )
+          root_objects=$( ls -A1 | egrep -vw ".git|rpmdir|.venv" )
           echo '.'
           echo "Root objects:"
           for o in ${root_objects} ; do
@@ -667,16 +667,6 @@ jobs:
 
           echo '.'
           echo -e "Converting debian/changelog into RPM changelog format and appending it to ${SPECFILE}."
-          # if [[ -n "${ENTRYPOINTS}" ]] ; then
-          #     if echo "${ENTRYPOINTS}" | grep -q -w 'dch2speclog' ; then
-          #         source .venv/bin/activate
-          #         echo "Current PATH: '${PATH}'"
-          #     fi
-          # fi
-          echo '.'
-          echo "Directory '.venv/bin:"
-          ls -lA --color=always .venv/bin
-
           if [[ -x .venv/bin/dch2speclog ]] ; then
               echo "Activating virtual environment '.venv' ..."
               source .venv/bin/activate
