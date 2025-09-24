@@ -42,13 +42,13 @@ jobs:
         uses: actions/checkout@v5
 
       - name: "Preparing the Debian container"
-        uses: fbrehm/actions/.github/actions/prepare-debian-container@develop
+        uses: fbrehm/actions/.github/actions/prepare-debian-container@main
         with:
           manage_locales: false
           install_flit: true
 
       - name: "Installing necessary PIP modules."
-        uses: fbrehm/actions/.github/actions/pyproject-install-pip-modules@develop
+        uses: fbrehm/actions/.github/actions/pyproject-install-pip-modules@main
         with:
           install_pytest: false
           install_linter_tools: false
@@ -66,11 +66,11 @@ jobs:
 
       - name: "Compiling i18n files ..."
         id: compile-i18n
-        uses: fbrehm/actions/.github/actions/compile-locales@develop
+        uses: fbrehm/actions/.github/actions/compile-locales@main
 
       - name: "Building the Python packages and deploying it to PyPi."
         # uses: casperdcl/deploy-pypi@v2
-        uses: fbrehm/actions/.github/actions/deploy-pypi@develop
+        uses: fbrehm/actions/.github/actions/deploy-pypi@main
         with:
           password: ${{ secrets.pypi_token }}
           pip: wheel -w dist/ --no-deps .

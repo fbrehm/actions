@@ -118,19 +118,19 @@ jobs:
           echo "::notice title=Execute Python tests::Testing Python version: $( python --version ) and locale '${{ matrix.locale }}'"
 
       - name: "Preparing the Debian container for locale '${{ matrix.locale }}'"
-        uses: fbrehm/actions/.github/actions/prepare-debian-container@develop
+        uses: fbrehm/actions/.github/actions/prepare-debian-container@main
         with:
           manage_locales: ${{ inputs.has_i18n }}
           additional_locales: '${{ matrix.locale }}'
 
       - name: "Compiling i18n files ..."
         id: compile-i18n
-        uses: fbrehm/actions/.github/actions/compile-locales@develop
+        uses: fbrehm/actions/.github/actions/compile-locales@main
         with:
           to_data_dir: false
 
       - name: "Installing PIP modules and linter tools"
-        uses: fbrehm/actions/.github/actions/pyproject-install-pip-modules@develop
+        uses: fbrehm/actions/.github/actions/pyproject-install-pip-modules@main
         with:
           install_pytest: true
           data_dir: ${{ inputs.data_dir }}

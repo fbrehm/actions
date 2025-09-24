@@ -536,7 +536,7 @@ jobs:
           install_flit: true
 
       - name: "Installing necessary PIP modules."
-        uses: fbrehm/actions/.github/actions/pyproject-install-pip-modules@develop
+        uses: fbrehm/actions/.github/actions/pyproject-install-pip-modules@main
         with:
           install_pytest: false
           install_linter_tools: false
