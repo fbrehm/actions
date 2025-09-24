@@ -679,7 +679,7 @@ jobs:
               echo "Current PATH: '${PATH}'"
           fi
           echo "Which dch2speclog: $( type -p dch2speclog)"
-          dch2speclog debian/changelog | grep -v '  ${cur_date} " >> "${SPECFILE}"
+          dch2speclog debian/changelog | grep -v "  ${cur_date} " >> "${SPECFILE}"
 
           echo '.'
           echo "::group::Generated '${SPECFILE}':"
