@@ -394,6 +394,7 @@ jobs:
           echo "::endgroup::"
 
       - name: "Show all used YUM repos"
+        id: show-yum-repos
         shell: bash
         run: |
           echo '.'
@@ -401,6 +402,7 @@ jobs:
           dnf ${DNF_ENABLE_REPO} repolist --all
 
       - name: "Upgrade all packages"
+        id: upgrade-all-packages
         shell: bash
         env:
           LC_ALL: "en_US.utf8"
@@ -420,6 +422,7 @@ jobs:
           echo "::endgroup::"
 
       - name: 'Install TZdata'
+        id: install-tzdata
         shell: bash
         run: |
           echo '.'; echo "Ensuring TZdata ..."
@@ -437,6 +440,7 @@ jobs:
           ls -l --color=always /usr/share/zoneinfo/zone.tab
 
       - name: 'Install Python 3'
+        id: install-python3
         shell: bash
         run: |
           echo '.'; echo "Installing Python ${{ matrix.py_version_nodot}} ..."
@@ -482,6 +486,7 @@ jobs:
           pip3 list --format columns
 
       - name: "Installing necessary PIP modules."
+        id: install-pip-modules
         uses: fbrehm/actions/.github/actions/pyproject-install-pip-modules@develop
         with:
           install_pytest: false
@@ -490,6 +495,7 @@ jobs:
           data_dir: ${{ inputs.data_dir }}
 
       - name: 'Installing build tools'
+        id: install-build-tools
         shell: bash
         run: |
           echo '.'; echo "Installing build tools"
@@ -565,6 +571,7 @@ jobs:
           fi
 
       - name: 'Preparing GPG for signing files without entering a password'
+        id: prepare-gpg
         uses: fbrehm/github-setup-gpg@main
         with:
           public_key: ${{ secrets.public_key }}
@@ -573,40 +580,51 @@ jobs:
           password_file: ${{ inputs.password_file }}
           key_id: ${{ inputs.key_id }}
 
-      # TODO
-      # Continue here ==>
-
       - name: 'Create build environment'
+        id: create-build-env
         shell: bash
         run: |
-          echo -e "\nVersion to build: ${PKG_BUILD_VERSION}"
+          echo '.'
+          echo "Version to build: ${PKG_BUILD_VERSION}"
 
-          echo -e "\nCreating RPMDIR ..."
+          echo '.'
+          echo "Creating RPMDIR ..."
           mkdir -pv rpmdir
           mkdir -pv rpmdir/SOURCES
 
           workdir=$(pwd)
           root_objects=$( ls -A1 | egrep -vw ".git|rpmdir" )
-          echo -e "\nRoot objects:"
+          echo '.'
+          echo "Root objects:"
           for o in ${root_objects} ; do
               echo " * ${o}"
           done
 
-          echo -e "\nEnsuring RPM source dir '${RPM_SRC_DIR}' ..."
+          echo '.'
+          echo "Ensuring RPM source dir '${RPM_SRC_DIR}' ..."
           mkdir -pv "${RPM_SRC_DIR}"
 
-          echo -e "\nCopy sources recursive into '${RPM_SRC_DIR}' ..."
+          echo '.'
+          echo "Copy sources recursive into '${RPM_SRC_DIR}' ..."
           tar cf - ${root_objects} | (cd "${RPM_SRC_DIR}" ; tar xf -)
 
           tarball_base="${PKG_NAME}.${PKG_VERSION}.tar.gz"
           tarball="rpmdir/SOURCES/${tarball_base}"
           tarball_abs=$( readlink --canonicalize-missing "${tarball}" )
-          echo -e "\nCreating '${tarball_abs}' ..."
+          echo '.'
+          echo "::group::Creating '${tarball_abs}' ..."
           tar --directory=rpmdir/SOURCES --create --verbose --gzip  --file "${tarball_abs}" "${RPM_SRC_DIR_BASE}"
-          echo -e "\nSource file:"
+          echo "::endgroup::"
+          echo '.'
+          echo "Source file:"
           ls -lA --color=always rpmdir/SOURCES/*.tar.gz
 
-          echo -e "\nCreating spec file '${SPECFILE}' ..."
+      - name: 'Creating spec file'
+        id: create-specfile
+        shell: bash
+        run: |
+          echo '.'
+          echo "Creating spec file '${SPECFILE}' ..."
           template="${{ inputs.template_specfile }}"
           if [[ "${SPECFILE}" == "${{ inputs.template_specfile }}" ]] ; then
               template="${{ inputs.template_specfile }}.bak0"
@@ -618,19 +636,28 @@ jobs:
                                   -e "s/@@@py_version_dot@@@/${{ matrix.py_version_dot }}/gi" \
                                   > "${SPECFILE}"
 
+          echo '.'
           echo -e "Converting debian/changelog into RPM changelog format and appending it to ${SPECFILE}."
-          dch2speclog=dch2speclog
-          if [[ -x bin/dch2speclog ]] ; then
-              dch2speclog=bin/dch2speclog
+          if [[ -n "${ENTRYPOINTS}" ]] ; then
+              if echo "${ENTRYPOINTS}" | grep -q -w 'dch2speclog' ; then
+                  source .venv/bin/activate
+              fi
           fi
-          ${dch2speclog} debian/changelog >> "${SPECFILE}"
+          dch2speclog debian/changelog >> "${SPECFILE}"
 
-          echo -e "\nGenerated '${SPECFILE}':"
+          echo '.'
+          echo "::group::Generated '${SPECFILE}':"
           cat "${SPECFILE}"
           echo "<--"
+          echo "::endgroup::"
 
+      - name: 'Creating .rpmmacros'
+        id: create-rpmmacros
+        shell: bash
+        run: |
+          echo '.'
           rpm_macros="${HOME}/.rpmmacros"
-          echo -e "\nCreating '${rpm_macros}' ..."
+          echo "Creating '${rpm_macros}' ..."
           echo "%__python3 /bin/python${{ matrix.py_version_dot }}" > "${rpm_macros}"
           echo "%_signature gpg"                                    >>"${rpm_macros}"
 
@@ -643,14 +670,17 @@ jobs:
               echo "%__gpg_sign_cmd %{__gpg} ${gpg_cmd}"                >>"${rpm_macros}"
           fi
 
-          echo -e "\nGenerated '${rpm_macros}':"
+          echo '.'
+          echo "Generated '${rpm_macros}':"
           cat "${rpm_macros}"
           echo "<--"
 
       - name: "Tweaking /usr/lib/rpm/rpmpopt-* ..."
+        id: tweak-rpmpopt
         shell: bash
         run: |
-          echo -e "\nTweaking /usr/lib/rpm/rpmpopt-* ..."
+          echo '.'
+          echo "Tweaking /usr/lib/rpm/rpmpopt-* ..."
 
           ls -l --color=always /usr/lib/rpm/rpmpopt-*
 
@@ -663,19 +693,28 @@ jobs:
           cp -p -v -i "${rpmoptfile}" "${rpmoptfile_bak}"
           sed -i -e 's/\(--addsign.*\) <.*/\1\x27 \\/' "${rpmoptfile}"
 
+          echo '.'
+          echo "Diff between '${rpmoptfile_bak}' and '${rpmoptfile}':"
           ls -l --color=always "${rpmoptfile}" "${rpmoptfile_bak}"
-
+          echo '.'
           diff -u "${rpmoptfile_bak}" "${rpmoptfile}" || true
 
       - name: 'Finally creating RPMs'
+        id: create-rpms
         shell: bash
         run: |
+          echo '.'
+          echo "Finally creating RPMs ..."
+
           cmd="rpmbuild -ba --nocheck --verbose --define \"_topdir $(pwd)/rpmdir\" \"${SPECFILE}\""
-          echo -e "\nExecuting ${cmd}"
+          echo '.'
+          echo "::group::Executing ${cmd}"
           eval ${cmd}
+          echo "::endgroup::"
 
           if [[ -e "${{ inputs.password_file }}" ]] ; then
-              echo -e "\nSigning packages ..."
+              echo '.'
+              echo "Signing packages ..."
               for f in $( find rpmdir -type f -iname "*.rpm" ) ; do
                   echo "  * ${f} ..."
                   echo "Checking existing signature:"
@@ -688,10 +727,12 @@ jobs:
               done
           fi
 
-          echo -e "\nResults:"
+          echo '.'
+          echo "Results:"
           find rpmdir/*RPMS -type f -print0 | xargs --null --no-run-if-empty ls -l -d --color=always
 
       - name: 'Upload RPM Packages'
+        id: upload-pkgs
         uses: actions/upload-artifact@v4
         with:
           name: rpm_pkgs_el${{ matrix.el_version }}
