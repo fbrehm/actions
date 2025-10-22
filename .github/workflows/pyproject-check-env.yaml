@@ -23,6 +23,9 @@ on:
       data_dir:
         description: "The data directory for containing man pages, i18n files a.s.o."
         value: ${{ jobs.check-pyproject-and-flit.outputs.data_dir }}
+      locales:
+        description: "A whitespace separated list of locales, which are supported by this project, en_US.UTF8 is always included."
+        value: ${{ jobs.check-pyproject-and-flit.outputs.locales }}
 
 ################################################################################
 jobs:
@@ -37,6 +40,7 @@ jobs:
     outputs:
       entrypoints: ${{ steps.get-entrypoints.outputs.entrypoints }}
       data_dir: ${{ steps.get-data-dir.outputs.data_dir }}
+      locales: ${{ steps.check-locales.outputs.locales }}
 
     steps:
       - name: "Checking out sources."
@@ -259,5 +263,145 @@ jobs:
           else
               echo "::notice title=Check environment::Did not found data directory."
           fi
+
+      - name: "Evaluating all supported locales by the current project."
+        id: check-locales
+        shell: bash
+        run: |
+          cur_locales="en_US.UTF-8\n"
+
+          declare -A main_locale=()
+          main_locale['af']='af_ZA'
+          main_locale['ar']='ar_SA'
+          main_locale['az']='az_AZ'
+          main_locale['be']='be_BY'
+          main_locale['bg']='bg_BG'
+          main_locale['bn']='bn_IN'
+          main_locale['bs']='bs_BA'
+          main_locale['ca']='ca_ES'
+          main_locale['cs']='cs_CZ'
+          main_locale['cy']='cy_GB'
+          main_locale['da']='da_DK'
+          main_locale['de']='de_DE'
+          main_locale['el']='el_GR'
+          main_locale['en']='en_EN'
+          main_locale['es']='es_ES'
+          main_locale['et']='et_ET'
+          main_locale['eu']='eu_ES'
+          main_locale['fa']='fa_IR'
+          main_locale['fi']='fi_FI'
+          main_locale['fo']='fo_FO'
+          main_locale['fr']='fr_FR'
+          main_locale['gl']='gl_ES'
+          main_locale['gu']='gu_IN'
+          main_locale['he']='he_IL'
+          main_locale['hi']='hi_IN'
+          main_locale['hr']='hr_HR'
+          main_locale['hu']='hu_HU'
+          main_locale['hy']='hy_HY'
+          main_locale['id']='id_ID'
+          main_locale['is']='is_IS'
+          main_locale['it']='it_IT'
+          main_locale['ja']='ja_JP'
+          main_locale['ka']='ka_GE'
+          main_locale['kk']='kk_KZ'
+          main_locale['kn']='kn_IN'
+          main_locale['ko']='ko_KR'
+          main_locale['kok']='kok_IN'
+          main_locale['lt']='lt_LT'
+          main_locale['lv']='lv_LV'
+          main_locale['mk']='mk_MK'
+          main_locale['ml']='ml_IN'
+          main_locale['mn']='mn_MN'
+          main_locale['ms']='ms_MY'
+          main_locale['nb']='nb_NO'
+          main_locale['nl']='nl_NL'
+          main_locale['nn']='nn_NO'
+          main_locale['pa']='pa_IN'
+          main_locale['pl']='pl_PL'
+          main_locale['pt']='pt_PT'
+          main_locale['ro']='ro_RO'
+          main_locale['ru']='ru_RU'
+          main_locale['se']='se_NO'
+          main_locale['sk']='sk_SK'
+          main_locale['sl']='sl_SI'
+          main_locale['sq']='sq_AL'
+          main_locale['sr']='sr_SR'
+          main_locale['sv']='sv_SE'
+          main_locale['sw']='sw_KE'
+          main_locale['syr']='syr_SY'
+          main_locale['ta']='ta_IN'
+          main_locale['te']='te_IN'
+          main_locale['th']='th_TH'
+          main_locale['tn']='tn_ZA'
+          main_locale['tr']='tr_TR'
+          main_locale['uk']='uk_UA'
+          main_locale['uz']='uz_UZ'
+          main_locale['vi']='vi_VN'
+          main_locale['xh']='xh_ZA'
+          main_locale['zh']='zh_CN'
+          main_locale['zu']='zu_ZA'
+
+          if [[ -d locale ]] ; then
+              echo "There seems to be supported locales."
+              for ldir in locale/* ; do
+                  if [[ ! -d "${ldir}" ]] ; then
+                      continue
+                  fi
+                  cur_locale=$( basename "${ldir}" )
+                  if [[ "${cur_locale}" =~ ^[a-z][a-z][a-z]?(_[A-Z][A-Z])?(\.[a-z1-9][a-z0-9:_\.-]*)?$ ]] ; then
+                      bare_locale=$( echo "${cur_locale}" | sed -e 's/\..*//' )
+                      charset=$( echo "${cur_locale}" | sed -e 's/.*\.//' | tr '[:lower:]' '[:upper:]')
+                      if [[ -z "${charset}" ]] ; then
+                          charset='UTF-8'
+                      fi
+                      if iconv -l | grep -q '^${charset}//' ; then
+                          :
+                      else
+                          echo "Found invalid character set '${charset}' in locale '${cur_locale}'."
+                          continue
+                      fi
+
+                      language=$( echo "${bare_locale}" | sed -e 's/_.*//' | tr '[:upper:]' '[:lower:]' )
+                      if [[ "${main_locale[${language}]+abc}" ]] ; then
+                          :
+                      else
+                          echo "Language '${language}' in locale '${cur_locale}' is not supported."
+                          continue
+                      fi
+                      country=$( echo "${bare_locale}" | sed -e 's/.*_//' | tr '[:lower:]' '[:upper:]' )
+                      if [[ -z "${country}" ]] ; then
+                          country="${main_locale[${language}]"
+                      fi
+
+                      used_locale="${language}_${country}.${charset}"
+                      echo "Found supported locale '${used_locale}'."
+
+                      if [[ "${used_locale}" == 'en_US.UTF-8' ]] ; then
+                          continue
+                      fi
+
+                      cur_locales+="${used_locale}\n"
+
+                  else
+                      echo "Found invalid locale '${cur_locale}'."
+                  fi
+              done
+          else
+              echo "This project does not support locales (other than en_US.UTF-8)."
+          fi
+
+          found_locales=''
+          for locale in $( echo -e "${cur_locales}" | grep -v -P '^\s*$' | sort -i | sed -e 's/^[ 	]*//' -e 's/[ 	]$//' ) ; do
+              if [[ -z "${locale}" ]] ; then
+                  continue
+              fi
+              if [[ -n "${found_locales}" ]] ; then
+                  found_locales+=" "
+              fi
+              found_locales+="${locale}"
+          done
+
+          echo "locales=${found_locales}" >>"$GITHUB_OUTPUT"
 
 # vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list
