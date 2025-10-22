@@ -351,11 +351,14 @@ jobs:
                   cur_locale=$( basename "${ldir}" )
                   if [[ "${cur_locale}" =~ ^[a-z][a-z][a-z]?(_[A-Z][A-Z])?(\.[a-z1-9][a-z0-9:_\.-]*)?$ ]] ; then
                       bare_locale=$( echo "${cur_locale}" | sed -e 's/\..*//' )
-                      charset=$( echo "${cur_locale}" | sed -e 's/.*\.//' | tr '[:lower:]' '[:upper:]')
+                      charset=''
+                      if echo "${cur_locale}" | grep -q -P '\.' ; then
+                          charset=$( echo "${cur_locale}" | sed -e 's/.*\.//' | tr '[:lower:]' '[:upper:]')
+                      fi
                       if [[ -z "${charset}" ]] ; then
                           charset='UTF-8'
                       fi
-                      if iconv -l | grep -q '^${charset}//' ; then
+                      if iconv -l | grep -q "^${charset}//" ; then
                           :
                       else
                           echo "Found invalid character set '${charset}' in locale '${cur_locale}'."
@@ -369,12 +372,17 @@ jobs:
                           echo "Language '${language}' in locale '${cur_locale}' is not supported."
                           continue
                       fi
-                      country=$( echo "${bare_locale}" | sed -e 's/.*_//' | tr '[:lower:]' '[:upper:]' )
+                      country=''
+                      if echo "${bare_locale}" | grep -q -P '_' ; then
+                          country=$( echo "${bare_locale}" | sed -e 's/.*_//' | tr '[:lower:]' '[:upper:]' )
+                      fi
                       if [[ -z "${country}" ]] ; then
-                          country="${main_locale[${language}]"
+                          l_locale="${main_locale[${language}]}"
+                      else
+                          l_locale="${language}_${country}"
                       fi
 
-                      used_locale="${language}_${country}.${charset}"
+                      used_locale="${l_locale}.${charset}"
                       echo "Found supported locale '${used_locale}'."
 
                       if [[ "${used_locale}" == 'en_US.UTF-8' ]] ; then
@@ -402,6 +410,7 @@ jobs:
               found_locales+="${locale}"
           done
 
+          echo "All found locales: '${found_locales}'"
           echo "locales=${found_locales}" >>"$GITHUB_OUTPUT"
 
 # vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list
