@@ -74,9 +74,12 @@ jobs:
             exit 5
           fi
 
-          TEST_LOCALES='["en_US.utf8"'
+          TEST_LOCALES='["en_US.UTF-8"'
           if [[ -n "${ADDITIONAL_LOCALES}" ]] ; then
               for locale in ${ADDITIONAL_LOCALES} ; do
+                  if [[ "${locale}" == "en_US.UTF-8" || "${locale}" == "en_US.utf8" ]] ; then
+                      continue
+                  fi
                   TEST_LOCALES+=", \"${locale}\""
               done
           fi

@@ -310,14 +310,23 @@ jobs:
           echo "Installing locales ..."
           langpacks='langpacks-en'
           echo " * en"
+          declare -A all_langs()
+          all_langs['en']='yes'
+
           if [[ -n "${ADDITIONAL_LOCALES}" ]] ; then
               for my_lc in "${ADDITIONAL_LOCALES}" ; do
                   base_lang=$( echo "${my_lc}" | sed -e 's/\..*//'  -e 's/_.*//' )
-                  echo " * ${base_lang}"
-                  langpack="langpacks-${base_lang}"
-                  langpacks+=" ${langpack}"
+                  if [[ "${all_langs[${base_lang}]+abc}" ]] ; then
+                      echo "Language '${base_lang}' already declared." >/dev/null
+                  else
+                      echo " * ${base_lang}"
+                      langpack="langpacks-${base_lang}"
+                      langpacks+=" ${langpack}"
+                      all_langs[${base_lang}]='yes'
+                  fi
               done
           fi
+
           echo -e "::group::Installing language packs ${langpacks}"
           cmd="dnf ${DNF_ENABLE_REPO} --assumeyes install glibc-all-langpacks ${langpacks}"
           echo "Calling: ${cmd}"
