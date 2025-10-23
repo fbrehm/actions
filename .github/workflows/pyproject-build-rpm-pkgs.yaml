@@ -562,6 +562,11 @@ jobs:
               man_dir="${{ inputs.data_dir }}/share/man/man${MAN_SECTION}"
               echo "Generating MAN pages in '${man_dir}'."
 
+              echo '.'
+              echo "::group::Install help2man"
+              dnf --assumeyes install  help2man
+              echo "::endgroup::"
+
               mkdir -p -v "${man_dir}"
               source .venv/bin/activate
               echo "Current PATH: '${PATH}'"
@@ -572,19 +577,14 @@ jobs:
               flit install --deps production --python .venv/bin/python3
               echo "::endgroup::"
 
-              echo '.'
-              echo "::group::Installing click-man ..."
-              pip3 install click-man
-              echo "::endgroup::"
-              echo "Which click-man: $( type -p click-man)"
-
               for entrypoint in ${ENTRYPOINTS}; do
+                  man_file="${man_dir}/${entrypoint}.${MAN_SECTION}"
                   echo '.'
-                  echo "::group::Generating man page for '${entrypoint}' ..."
-                  cmd="click-man --target \"${man_dir}\" --man-version ${MAN_SECTION} \"${entrypoint}\""
+                  echo "Generating man page for '${entrypoint}' ..."
+                  cmd="help2man --no-info --no-discard-stderr  --version-string \"${PKG_VERSION}\""
+                  cmd+=" --section ${MAN_SECTION} \".venv/bin/${entrypoint}\" > \"${man_file}\""
                   echo "Calling: ${cmd}"
                   eval ${cmd}
-                  echo "::endgroup::"
               done
 
               echo '.'
