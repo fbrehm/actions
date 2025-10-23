@@ -284,7 +284,7 @@ jobs:
           main_locale['da']='da_DK'
           main_locale['de']='de_DE'
           main_locale['el']='el_GR'
-          main_locale['en']='en_EN'
+          main_locale['en']='en_US'
           main_locale['es']='es_ES'
           main_locale['et']='et_ET'
           main_locale['eu']='eu_ES'
