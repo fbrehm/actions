@@ -139,6 +139,10 @@ jobs:
         shell: bash
         run: |
           echo "Executing pytest:"
+          echo '.'
+          echo 'Current locale:'
+          locale
+          echo '.'
           source .venv/bin/activate
           pytest --verbose
 
