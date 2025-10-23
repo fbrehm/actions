@@ -564,7 +564,7 @@ jobs:
 
               echo '.'
               echo "::group::Install help2man"
-              dnf --assumeyes install  help2man
+              dnf --enablerepo=devel,crb --assumeyes install  help2man
               echo "::endgroup::"
 
               mkdir -p -v "${man_dir}"
