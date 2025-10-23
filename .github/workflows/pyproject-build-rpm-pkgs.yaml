@@ -564,7 +564,9 @@ jobs:
 
               echo '.'
               echo "::group::Install help2man"
-              dnf --enablerepo=devel,crb --assumeyes install  help2man
+              cmd="dnf install --enablerepo=devel,crb --assumeyes install  help2man"
+              echo "Calling: ${cmd}"
+              eval ${cmd}
               echo "::endgroup::"
 
               mkdir -p -v "${man_dir}"
