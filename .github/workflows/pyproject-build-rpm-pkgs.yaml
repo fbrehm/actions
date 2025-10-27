@@ -310,7 +310,7 @@ jobs:
           echo "Installing locales ..."
           langpacks='langpacks-en'
           echo " * en"
-          declare -A all_langs()
+          declare -A all_langs=()
           all_langs['en']='yes'
 
           if [[ -n "${ADDITIONAL_LOCALES}" ]] ; then
