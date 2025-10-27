@@ -282,6 +282,13 @@ jobs:
         id: checkout-sources
         uses: actions/checkout@v5
 
+      - name: 'Adding Debian repo definitions of Frank Brehm'
+        id: add-fbrehm-apt-repo
+        uses: fbrehm/github-add-fb-debian-repo@main
+        with:
+          vendor: Debian
+          distro: ${{ inputs.latest_debian_version }}
+
       - name: "Install Debian Python Build Environment"
         id: install-debian-pkgs
         uses: fbrehm/debian-install-python-buildenv@main
@@ -320,13 +327,6 @@ jobs:
               echo "Removing setup.py ..."
               rm -fv setup.py
           fi
-
-      - name: 'Adding Debian repo definitions of Frank Brehm'
-        id: add-fbrehm-apt-repo
-        uses: fbrehm/github-add-fb-debian-repo@main
-        with:
-          vendor: Debian
-          distro: ${{ inputs.latest_debian_version }}
 
       - name: "Preparing the Debian container"
         id: prepare-debian-container
@@ -465,6 +465,13 @@ jobs:
         id: checkout-sources
         uses: actions/checkout@v5
 
+      - name: 'Adding Debian repo definitions of Frank Brehm'
+        id: add-fbrehm-apt-repo
+        uses: fbrehm/github-add-fb-debian-repo@main
+        with:
+          vendor: ${{ matrix.distributor }}
+          distro: ${{ matrix.os_codename }}
+
       - name: "Install Debian Python Build Environment"
         id: install-debian-pkgs
         uses: fbrehm/debian-install-python-buildenv@main
@@ -508,13 +515,6 @@ jobs:
           echo "Setting system timezone to '${TZ}' ..."
           ln -fvs /usr/share/zoneinfo/${{ inputs.timezone }} /etc/localtime
           echo "Current date: $( date --rfc-3339=seconds )"
-
-      - name: 'Adding Debian repo definitions of Frank Brehm'
-        id: add-fbrehm-apt-repo
-        uses: fbrehm/github-add-fb-debian-repo@main
-        with:
-          vendor: ${{ matrix.distributor }}
-          distro: ${{ matrix.os_codename }}
 
       - name: "Installing Python 3 .."
         shell: bash
