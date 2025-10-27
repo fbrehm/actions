@@ -404,7 +404,7 @@ jobs:
         run: |
           echo '.'
           PASSWORD_FILE_ABS=$( readlink --canonicalize-missing "${{ inputs.password_file }}" )
-          echo "Password file: '{PASSWORD_FILE_ABS}'"
+          echo "Password file: '${PASSWORD_FILE_ABS}'"
 
           if [[ -e "${PASSWORD_FILE_ABS}" && -x "${SIGNING_HOOK_SCRIPT}" ]] ; then
               echo "::notice title=Build Debian source package::Building signed Debian source package for ${PKG_NAME}-${PKG_VERSION}"
