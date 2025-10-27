@@ -26,7 +26,7 @@ runs:
       id: compile-locales
       shell:
       run: |
-        if [[ ! -d "${{ inputs.source_dir }}" ]] ; then
+        if [[ -d "${{ inputs.source_dir }}" ]] ; then
             echo "Compiling gettext locale files in directory '${{ inputs.source_dir }}' ..."
             target_root="${{ inputs.source_dir }}"
             if [[ -n "${{ inputs.data_dir }}" && "${{ inputs.to_data_dir }}" == true ]] ; then
@@ -41,11 +41,16 @@ runs:
                 base_stem=$( basename --suffix '.po' "${locale_file}" )
                 dir_name=$( dirname "${locale_file}" )
                 target_dir="${target_root}/${dir_name#locale/}"
+                echo "Ensuring existence of '${target_dir}/' ..."
+                mkdir --parent --verbose "${target_dir}"
                 target_mo_file="${target_dir}/${base_stem}.mo"
                 echo " * '${locale_file}' => '${target_mo_file}' ..."
                 printf '   '
                 msgfmt --statistics --output-file "${target_mo_file}" "${locale_file}"
             done
+
+            echo "Compiled locale dfinitions:"
+            find "${target_root}" -type f -iname '*.mo' | xargs ls -l
 
         else
             echo "No generation of locale files possible, source directory '${{ inputs.source_dir }}' does not exists."

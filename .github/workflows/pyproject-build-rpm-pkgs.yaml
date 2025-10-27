@@ -560,6 +560,39 @@ jobs:
           echo "Directory '.venv/bin:"
           ls -lA --color=always .venv/bin
 
+      - name: "Compiling i18n files ..."
+        id: compile-i18n
+        shell: bash
+        run: |
+          LOCALE_SRC_DIR_ROOT=locale
+          DATA_DIR=data
+          if [[ -d "${LOCALE_SRC_DIR_ROOT}" ]] ; then
+              echo "Compiling gettext locale files in directory '${LOCALE_SRC_DIR_ROOT}' ..."
+              target_root="${LOCALE_SRC_DIR_ROOT}/share/locale"
+
+              echo "Ensuring directory '${target_root}' ..."
+              mkdir --parent --verbose "${target_root}"
+
+              echo "Compiling:"
+              for locale_file in $( find "${LOCALE_SRC_DIR_ROOT}" -type f -name '*.po' ) ; do
+                  base_stem=$( basename --suffix '.po' "${locale_file}" )
+                  dir_name=$( dirname "${locale_file}" )
+                  target_dir="${target_root}/${dir_name#locale/}"
+                  echo "Ensuring existence of '${target_dir}/' ..."
+                  mkdir --parent --verbose "${target_dir}"
+                  target_mo_file="${target_dir}/${base_stem}.mo"
+                  echo " * '${locale_file}' => '${target_mo_file}' ..."
+                  printf '   '
+                  msgfmt --statistics --output-file "${target_mo_file}" "${locale_file}"
+              done
+
+              echo "Compiled locale dfinitions:"
+              find "${target_root}" -type f -iname '*.mo' | xargs ls -l
+
+          else
+              echo "No generation of locale files possible, source directory '${LOCALE_SRC_DIR_ROOT}' does not exists."
+          fi
+
       - name: 'Creating man pages'
         id: create-man-pages
         shell: bash
