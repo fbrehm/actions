@@ -74,9 +74,12 @@ jobs:
             exit 5
           fi
 
-          TEST_LOCALES='["en_US.utf8"'
+          TEST_LOCALES='["en_US.UTF-8"'
           if [[ -n "${ADDITIONAL_LOCALES}" ]] ; then
               for locale in ${ADDITIONAL_LOCALES} ; do
+                  if [[ "${locale}" == "en_US.UTF-8" || "${locale}" == "en_US.utf8" ]] ; then
+                      continue
+                  fi
                   TEST_LOCALES+=", \"${locale}\""
               done
           fi
@@ -139,6 +142,29 @@ jobs:
         shell: bash
         run: |
           echo "Executing pytest:"
+          echo '.'
+          language="${{ matrix.locale }}"
+          if echo "${{ matrix.locale }}" | grep -q -P '\.' ; then
+              language=$( echo "${{ matrix.locale }}" | sed -e 's/\..*//' )
+          fi
+          export LANG="${{ matrix.locale }}"
+          export LANGUAGE="${language}"
+          export LC_CTYPE="${{ matrix.locale }}"
+          export LC_NUMERIC="${{ matrix.locale }}"
+          export LC_TIME="${{ matrix.locale }}"
+          export LC_COLLATE="${{ matrix.locale }}"
+          export LC_MONETARY="${{ matrix.locale }}"
+          export LC_MESSAGES="${{ matrix.locale }}"
+          export LC_PAPER="${{ matrix.locale }}"
+          export LC_NAME="${{ matrix.locale }}"
+          export LC_ADDRESS="${{ matrix.locale }}"
+          export LC_TELEPHONE="${{ matrix.locale }}"
+          export LC_MEASUREMENT="${{ matrix.locale }}"
+          export LC_IDENTIFICATION="${{ matrix.locale }}"
+
+          echo 'Current locale:'
+          locale
+          echo '.'
           source .venv/bin/activate
           pytest --verbose
 

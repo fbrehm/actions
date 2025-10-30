@@ -282,6 +282,13 @@ jobs:
         id: checkout-sources
         uses: actions/checkout@v5
 
+      - name: 'Adding Debian repo definitions of Frank Brehm'
+        id: add-fbrehm-apt-repo
+        uses: fbrehm/github-add-fb-debian-repo@main
+        with:
+          vendor: Debian
+          distro: ${{ inputs.latest_debian_version }}
+
       - name: "Install Debian Python Build Environment"
         id: install-debian-pkgs
         uses: fbrehm/debian-install-python-buildenv@main
@@ -320,13 +327,6 @@ jobs:
               echo "Removing setup.py ..."
               rm -fv setup.py
           fi
-
-      - name: 'Adding Debian repo definitions of Frank Brehm'
-        id: add-fbrehm-apt-repo
-        uses: fbrehm/github-add-fb-debian-repo@main
-        with:
-          vendor: Debian
-          distro: ${{ inputs.latest_debian_version }}
 
       - name: "Preparing the Debian container"
         id: prepare-debian-container
@@ -404,7 +404,7 @@ jobs:
         run: |
           echo '.'
           PASSWORD_FILE_ABS=$( readlink --canonicalize-missing "${{ inputs.password_file }}" )
-          echo "Password file: '{PASSWORD_FILE_ABS}'"
+          echo "Password file: '${PASSWORD_FILE_ABS}'"
 
           if [[ -e "${PASSWORD_FILE_ABS}" && -x "${SIGNING_HOOK_SCRIPT}" ]] ; then
               echo "::notice title=Build Debian source package::Building signed Debian source package for ${PKG_NAME}-${PKG_VERSION}"
@@ -465,6 +465,13 @@ jobs:
         id: checkout-sources
         uses: actions/checkout@v5
 
+      - name: 'Adding Debian repo definitions of Frank Brehm'
+        id: add-fbrehm-apt-repo
+        uses: fbrehm/github-add-fb-debian-repo@main
+        with:
+          vendor: ${{ matrix.distributor }}
+          distro: ${{ matrix.os_codename }}
+
       - name: "Install Debian Python Build Environment"
         id: install-debian-pkgs
         uses: fbrehm/debian-install-python-buildenv@main
@@ -509,13 +516,6 @@ jobs:
           ln -fvs /usr/share/zoneinfo/${{ inputs.timezone }} /etc/localtime
           echo "Current date: $( date --rfc-3339=seconds )"
 
-      - name: 'Adding Debian repo definitions of Frank Brehm'
-        id: add-fbrehm-apt-repo
-        uses: fbrehm/github-add-fb-debian-repo@main
-        with:
-          vendor: ${{ matrix.distributor }}
-          distro: ${{ matrix.os_codename }}
-
       - name: "Installing Python 3 .."
         shell: bash
         run: |
@@ -543,6 +543,43 @@ jobs:
           install_py_venv_package: true
           data_dir: ${{ inputs.data_dir }}
 
+      - name: "Compiling i18n files ..."
+        id: compile-i18n
+        shell: bash
+        run: |
+          LOCALE_SRC_DIR_ROOT=locale
+          if [[ -d "${LOCALE_SRC_DIR_ROOT}" ]] ; then
+              if [[ -n "${{ inputs.data_dir }}" ]] ; then
+                  echo "Compiling gettext locale files in directory '${LOCALE_SRC_DIR_ROOT}' ..."
+                  target_root="${{ inputs.data_dir }}/share/locale"
+
+                  echo "Ensuring directory '${target_root}' ..."
+                  mkdir --parent --verbose "${target_root}"
+
+                  echo "Compiling:"
+                  for locale_file in $( find "${LOCALE_SRC_DIR_ROOT}" -type f -name '*.po' ) ; do
+                      base_stem=$( basename --suffix '.po' "${locale_file}" )
+                      dir_name=$( dirname "${locale_file}" )
+                      target_dir="${target_root}/${dir_name#locale/}"
+                      echo "Ensuring existence of '${target_dir}/' ..."
+                      mkdir --parent --verbose "${target_dir}"
+                      target_mo_file="${target_dir}/${base_stem}.mo"
+                      echo " * '${locale_file}' => '${target_mo_file}' ..."
+                      printf '   '
+                      msgfmt --statistics --output-file "${target_mo_file}" "${locale_file}"
+                  done
+
+                  echo "Compiled locale dfinitions:"
+                  find "${target_root}" -type f -iname '*.mo' | xargs ls -l
+              else
+                  msg="There are obviously i18n data available in directory '${LOCALE_SRC_DIR_ROOT}', "
+                  msg+="but there is no external data dir defined in pyproject.toml, where to put them."
+                  echo "::error::${msg}"
+              fi
+          else
+              echo "No generation of locale files possible, i18n directory '${LOCALE_SRC_DIR_ROOT}' does not exists."
+          fi
+
       - name: 'Creating man pages'
         id: create-man-pages
         shell: bash
@@ -550,41 +587,49 @@ jobs:
           FLIT_ROOT_INSTALL: 1
         run: |
           if [[ -n "${ENTRYPOINTS}" ]] ; then
-              man_dir="data/share/man/man${MAN_SECTION}"
+              if [[ -n "${{ inputs.data_dir }}" ]] ; then
+                  man_dir="${{ inputs.data_dir }}/share/man/man${MAN_SECTION}"
 
-              echo '.'
-              echo "Generating MAN pages in '${man_dir}'."
-
-              mkdir -p -v "${man_dir}"
-              source .venv/bin/activate
-              echo "Current PATH: '${PATH}'"
-
-              echo '.'
-              echo "Installing entrypoints ..."
-              echo "Which flit: $( type -p flit )"
-              flit install --deps production --python .venv/bin/python3
-
-              echo '.'
-              echo "::group::Installing click-man ..."
-              pip3 install click-man
-              echo "::endgroup::"
-
-              for entrypoint in ${ENTRYPOINTS}; do
                   echo '.'
-                  echo "::group::Generating man page for '${entrypoint}' ..."
-                  cmd="click-man --target \"${man_dir}\" --man-version ${MAN_SECTION} \"${entrypoint}\""
-                  echo "Calling: ${cmd}"
-                  eval ${cmd}
+                  echo "Generating MAN pages in '${man_dir}'."
+
+                  echo '.'
+                  echo "::group::Install help2man"
+                  apt install --yes --no-install-recommends help2man
                   echo "::endgroup::"
-              done
 
-              echo '.'
-              echo "Generated man pages:"
-              ls -l --color=always "${man_dir}"
+                  mkdir -p -v "${man_dir}"
+                  source .venv/bin/activate
+                  echo "Current PATH: '${PATH}'"
 
-              echo '.'
-              echo "Compressing man pages:"
-              gzip -v9 "${man_dir}"/*
+                  echo '.'
+                  echo "Installing entrypoints ..."
+                  echo "Which flit: $( type -p flit )"
+                  flit install --deps production --python .venv/bin/python3
+
+                  for entrypoint in ${ENTRYPOINTS}; do
+                      man_file="${man_dir}/${entrypoint}.${MAN_SECTION}"
+                      echo '.'
+                      echo "Generating man page for '${entrypoint}' ..."
+                      cmd="help2man --no-info --no-discard-stderr  --version-string \"${PKG_VERSION}\""
+                      cmd+=" --section ${MAN_SECTION} \".venv/bin/${entrypoint}\" > \"${man_file}\""
+                      echo "Calling: ${cmd}"
+                      eval ${cmd}
+                  done
+
+                  echo '.'
+                  echo "Generated man pages:"
+                  ls -l --color=always "${man_dir}"
+
+                  echo '.'
+                  echo "Compressing man pages:"
+                  gzip -v9 "${man_dir}"/*
+
+              else
+                  msg="There are entrypoints for generating man pages defined in pyproject.toml, "
+                  msg+="but there is no external data dir defined, where to put them."
+                  echo "::error::${msg}"
+              fi
           else
               echo "::notice title=Build Debian binary packages::No entrypoints found for creating man pages."
           fi

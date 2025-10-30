@@ -310,14 +310,23 @@ jobs:
           echo "Installing locales ..."
           langpacks='langpacks-en'
           echo " * en"
+          declare -A all_langs=()
+          all_langs['en']='yes'
+
           if [[ -n "${ADDITIONAL_LOCALES}" ]] ; then
               for my_lc in "${ADDITIONAL_LOCALES}" ; do
                   base_lang=$( echo "${my_lc}" | sed -e 's/\..*//'  -e 's/_.*//' )
-                  echo " * ${base_lang}"
-                  langpack="langpacks-${base_lang}"
-                  langpacks+=" ${langpack}"
+                  if [[ "${all_langs[${base_lang}]+abc}" ]] ; then
+                      echo "Language '${base_lang}' already declared." >/dev/null
+                  else
+                      echo " * ${base_lang}"
+                      langpack="langpacks-${base_lang}"
+                      langpacks+=" ${langpack}"
+                      all_langs[${base_lang}]='yes'
+                  fi
               done
           fi
+
           echo -e "::group::Installing language packs ${langpacks}"
           cmd="dnf ${DNF_ENABLE_REPO} --assumeyes install glibc-all-langpacks ${langpacks}"
           echo "Calling: ${cmd}"
@@ -551,6 +560,43 @@ jobs:
           echo "Directory '.venv/bin:"
           ls -lA --color=always .venv/bin
 
+      - name: "Compiling i18n files ..."
+        id: compile-i18n
+        shell: bash
+        run: |
+          LOCALE_SRC_DIR_ROOT=locale
+          if [[ -d "${LOCALE_SRC_DIR_ROOT}" ]] ; then
+              if [[ -n "${{ inputs.data_dir }}" ]] ; then
+                  echo "Compiling gettext locale files in directory '${LOCALE_SRC_DIR_ROOT}' ..."
+                  target_root="${{ inputs.data_dir }}/share/locale"
+
+                  echo "Ensuring directory '${target_root}' ..."
+                  mkdir --parent --verbose "${target_root}"
+
+                  echo "Compiling:"
+                  for locale_file in $( find "${LOCALE_SRC_DIR_ROOT}" -type f -name '*.po' ) ; do
+                      base_stem=$( basename --suffix '.po' "${locale_file}" )
+                      dir_name=$( dirname "${locale_file}" )
+                      target_dir="${target_root}/${dir_name#locale/}"
+                      echo "Ensuring existence of '${target_dir}/' ..."
+                      mkdir --parent --verbose "${target_dir}"
+                      target_mo_file="${target_dir}/${base_stem}.mo"
+                      echo " * '${locale_file}' => '${target_mo_file}' ..."
+                      printf '   '
+                      msgfmt --statistics --output-file "${target_mo_file}" "${locale_file}"
+                  done
+
+                  echo "Compiled locale dfinitions:"
+                  find "${target_root}" -type f -iname '*.mo' | xargs ls -l
+              else
+                  msg="There are obviously i18n data available in directory '${LOCALE_SRC_DIR_ROOT}', "
+                  msg+="but there is no external data dir defined in pyproject.toml, where to put them."
+                  echo "::error::${msg}"
+              fi
+          else
+              echo "No generation of locale files possible, i18n directory '${LOCALE_SRC_DIR_ROOT}' does not exists."
+          fi
+
       - name: 'Creating man pages'
         id: create-man-pages
         shell: bash
@@ -558,42 +604,52 @@ jobs:
           FLIT_ROOT_INSTALL: 1
         run: |
           if [[ -n "${ENTRYPOINTS}" ]] ; then
-              echo '.'
-              man_dir="${{ inputs.data_dir }}/share/man/man${MAN_SECTION}"
-              echo "Generating MAN pages in '${man_dir}'."
+              if [[ -n "${{ inputs.data_dir }}" ]] ; then
 
-              mkdir -p -v "${man_dir}"
-              source .venv/bin/activate
-              echo "Current PATH: '${PATH}'"
-
-              echo '.'
-              echo "::group::Installing entrypoints ..."
-              echo "Which flit: $( type -p flit )"
-              flit install --deps production --python .venv/bin/python3
-              echo "::endgroup::"
-
-              echo '.'
-              echo "::group::Installing click-man ..."
-              pip3 install click-man
-              echo "::endgroup::"
-              echo "Which click-man: $( type -p click-man)"
-
-              for entrypoint in ${ENTRYPOINTS}; do
                   echo '.'
-                  echo "::group::Generating man page for '${entrypoint}' ..."
-                  cmd="click-man --target \"${man_dir}\" --man-version ${MAN_SECTION} \"${entrypoint}\""
+                  man_dir="${{ inputs.data_dir }}/share/man/man${MAN_SECTION}"
+                  echo "Generating MAN pages in '${man_dir}'."
+
+                  echo '.'
+                  echo "::group::Install help2man"
+                  cmd="dnf --enablerepo=devel,crb --assumeyes install help2man"
                   echo "Calling: ${cmd}"
                   eval ${cmd}
                   echo "::endgroup::"
-              done
 
-              echo '.'
-              echo "Generated man pages:"
-              ls -l --color=always "${man_dir}"
+                  mkdir -p -v "${man_dir}"
+                  source .venv/bin/activate
+                  echo "Current PATH: '${PATH}'"
 
-              echo '.'
-              echo "Compressing man pages:"
-              gzip -v9 "${man_dir}"/*
+                  echo '.'
+                  echo "::group::Installing entrypoints ..."
+                  echo "Which flit: $( type -p flit )"
+                  flit install --deps production --python .venv/bin/python3
+                  echo "::endgroup::"
+
+                  for entrypoint in ${ENTRYPOINTS}; do
+                      man_file="${man_dir}/${entrypoint}.${MAN_SECTION}"
+                      echo '.'
+                      echo "Generating man page for '${entrypoint}' ..."
+                      cmd="help2man --no-info --no-discard-stderr  --version-string \"${PKG_VERSION}\""
+                      cmd+=" --section ${MAN_SECTION} \".venv/bin/${entrypoint}\" > \"${man_file}\""
+                      echo "Calling: ${cmd}"
+                      eval ${cmd}
+                  done
+
+                  echo '.'
+                  echo "Generated man pages:"
+                  ls -l --color=always "${man_dir}"
+
+                  echo '.'
+                  echo "Compressing man pages:"
+                  gzip -v9 "${man_dir}"/*
+
+              else
+                  msg="There are entrypoints for generating man pages defined in pyproject.toml, "
+                  msg+="but there is no external data dir defined, where to put them."
+                  echo "::error::${msg}"
+              fi
           else
               echo "::notice title=Build RPM packages::No entrypoints found for creating man pages."
           fi

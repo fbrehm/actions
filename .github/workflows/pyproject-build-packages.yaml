@@ -185,7 +185,7 @@ jobs:
     needs: check-src
     with:
       has_i18n: ${{ inputs.has_i18n }}
-      additional_locales: ${{ inputs.additional_locales }}
+      additional_locales: ${{ needs.check-src.outputs.locales }}
       test_python_versions: ${{ inputs.test_python_versions }}
       latest_debian_version: ${{ inputs.latest_debian_version }}
       entrypoints: ${{ needs.check-src.outputs.entrypoints }}
@@ -231,7 +231,7 @@ jobs:
       - check-src
     with:
       additional_debian_build_packages: ${{ inputs.additional_debian_build_packages }}
-      additional_locales: ${{ inputs.additional_locales }}
+      additional_locales: ${{ needs.check-src.outputs.locales }}
       debian_email: ${{ inputs.debian_email }}
       debian_fullname: ${{ inputs.debian_fullname }}
       debian_versions: ${{ inputs.debian_versions }}
@@ -258,7 +258,7 @@ jobs:
       - exec-python-linter
       - check-src
     with:
-      additional_locales: ${{ inputs.additional_locales }}
+      additional_locales: ${{ needs.check-src.outputs.locales }}
       additional_rpm_build_packages: ${{ inputs.additional_rpm_build_packages }}
       debian_email: ${{ inputs.debian_email }}
       debian_fullname: ${{ inputs.debian_fullname }}
