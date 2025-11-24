@@ -552,25 +552,40 @@ jobs:
               if [[ -n "${{ inputs.data_dir }}" ]] ; then
                   echo "Compiling gettext locale files in directory '${LOCALE_SRC_DIR_ROOT}' ..."
                   target_root="${{ inputs.data_dir }}/share/locale"
+                  count_po_files=$( find "${LOCALE_SRC_DIR_ROOT}" -type f -name '*.po' | wc -l )
 
-                  echo "Ensuring directory '${target_root}' ..."
-                  mkdir --parent --verbose "${target_root}"
+                  if [[ "${count_po_files}" -lt 1 ]] ; then
+                      echo "::error::Did not found any *.po files below '${LOCALE_SRC_DIR_ROOT}/'."
+                  else
+                      echo "Found ${count_po_files} *.po files."
+                      echo "."
 
-                  echo "Compiling:"
-                  for locale_file in $( find "${LOCALE_SRC_DIR_ROOT}" -type f -name '*.po' ) ; do
-                      base_stem=$( basename --suffix '.po' "${locale_file}" )
-                      dir_name=$( dirname "${locale_file}" )
-                      target_dir="${target_root}/${dir_name#locale/}"
-                      echo "Ensuring existence of '${target_dir}/' ..."
-                      mkdir --parent --verbose "${target_dir}"
-                      target_mo_file="${target_dir}/${base_stem}.mo"
-                      echo " * '${locale_file}' => '${target_mo_file}' ..."
-                      printf '   '
-                      msgfmt --statistics --output-file "${target_mo_file}" "${locale_file}"
-                  done
+                      echo "Ensuring directory '${target_root}' ..."
+                      mkdir --parent --verbose "${target_root}"
 
-                  echo "Compiled locale dfinitions:"
-                  find "${target_root}" -type f -iname '*.mo' | xargs ls -l
+                      echo "Compiling:"
+                      for locale_file in $( find "${LOCALE_SRC_DIR_ROOT}" -type f -name '*.po' ) ; do
+                          base_stem=$( basename --suffix '.po' "${locale_file}" )
+                          dir_name=$( dirname "${locale_file}" )
+                          target_dir="${target_root}/${dir_name#locale/}"
+                          echo "Ensuring existence of '${target_dir}/' ..."
+                          mkdir --parent --verbose "${target_dir}"
+                          target_mo_file="${target_dir}/${base_stem}.mo"
+                          echo " * '${locale_file}' => '${target_mo_file}' ..."
+                          printf '   '
+                          msgfmt --statistics --output-file "${target_mo_file}" "${locale_file}"
+                      done
+
+                      echo "."
+                      echo "Compiled locale dfinitions:"
+                      find "${target_root}" -type f -iname '*.mo' | xargs ls -l
+
+                      if [[ -d "${{ inputs.data_dir }}/build" ]] ; then
+                          echo "."
+                          echo "Removing now pointless directory '${{ inputs.data_dir }}/build' ..."
+                          rm -rfv "${{ inputs.data_dir }}/build"
+                      fi
+                  fi
               else
                   msg="There are obviously i18n data available in directory '${LOCALE_SRC_DIR_ROOT}', "
                   msg+="but there is no external data dir defined in pyproject.toml, where to put them."
@@ -625,6 +640,11 @@ jobs:
                   echo "Compressing man pages:"
                   gzip -v9 "${man_dir}"/*
 
+                  if [[ -d "${{ inputs.data_dir }}/build" ]] ; then
+                      echo "."
+                      echo "Removing now pointless directory '${{ inputs.data_dir }}/build' ..."
+                      rm -rfv "${{ inputs.data_dir }}/build"
+                  fi
               else
                   msg="There are entrypoints for generating man pages defined in pyproject.toml, "
                   msg+="but there is no external data dir defined, where to put them."
