@@ -114,7 +114,6 @@ jobs:
               echo "No generation of locale files possible, i18n directory '${LOCALE_SRC_DIR_ROOT}' does not exists."
           fi
 
-
       - name: "Building the Python packages and deploying it to PyPi."
         # uses: casperdcl/deploy-pypi@v2
         uses: fbrehm/actions/.github/actions/deploy-pypi@main
