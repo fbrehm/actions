@@ -30,11 +30,11 @@ on:
       test_python_versions:
         description: 'A list of Python versions, for which the package should be tested.'
         type: string
-        default: '["3.9", "3.10", "3.11", "3.12", "3.13"]'
+        default: '["3.9", "3.10", "3.12", "3.13", "3.14"]'
       latest_python_version:
         description: "The latest Python version for executing linter tests."
         type: string
-        default: "3.13"
+        default: "3.14"
       srcdir:
         description: "The parent directory of the libdir."
         type: string
