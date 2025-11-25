@@ -119,6 +119,12 @@ jobs:
         shell: bash
         run: |
           if [[ -n "${{ inputs.data_dir }}" ]] ; then
+              if [[ -d "${{ inputs.data_dir }}/build" ]] ; then
+                  echo "Removing pointless directory '${{ inputs.data_dir }}/build' ..."
+                  rm -rfv "${{ inputs.data_dir }}/build"
+                  echo "."
+              fi
+
               count_datafiles=$( find ${{ inputs.data_dir }} -type f | wc -l )
               if [[ "${count_datafiles}" -lt 1 ]] ; then
                   echo "::notice title=Disabling data directory::Disabling pointless data directory '${{ inputs.data_dir }}' in pyproject.toml."
