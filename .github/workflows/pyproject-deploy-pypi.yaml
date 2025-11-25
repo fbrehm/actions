@@ -114,6 +114,27 @@ jobs:
               echo "No generation of locale files possible, i18n directory '${LOCALE_SRC_DIR_ROOT}' does not exists."
           fi
 
+      - name: "Disabling senseless datadir"
+        id: disable-datadir
+        shell: bash
+        run: |
+          if [[ -n "${{ inputs.data_dir }}" ]] ; then
+              count_datafiles=$( find ${{ inputs.data_dir }} -type f | wc -l )
+              if [[ "${count_datafiles}" -lt 1 ]] ; then
+                  echo "::notice title=Disabling data directory::Disabling pointless data directory '${{ inputs.data_dir }}' in pyproject.toml."
+                  sed -i -e 's/^[ 	]*directory *= *${{ inputs.data_dir }}/# directory =  ${{ inputs.data_dir }}/' pyproject.toml
+                  echo "."
+                  echo "pyproject.toml:"
+                  cat pyproject.toml
+                  echo "<-- EOF"
+                  echo "."
+              else
+                  echo "There are data files in '${{ inputs.data_dir }}', data directory will kept enabled."
+              fi
+          else
+              echo "No data directory defined."
+          fi
+
       - name: "Building the Python packages and deploying it to PyPi."
         # uses: casperdcl/deploy-pypi@v2
         uses: fbrehm/actions/.github/actions/deploy-pypi@main
