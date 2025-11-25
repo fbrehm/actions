@@ -128,7 +128,10 @@ jobs:
               count_datafiles=$( find ${{ inputs.data_dir }} -type f | wc -l )
               if [[ "${count_datafiles}" -lt 1 ]] ; then
                   echo "::notice title=Disabling data directory::Disabling pointless data directory '${{ inputs.data_dir }}' in pyproject.toml."
-                  sed -i -e 's/^[ 	]*directory *= *${{ inputs.data_dir }}/# directory =  ${{ inputs.data_dir }}/' pyproject.toml
+                  sed -i -e 's/^[ 	]*directory *= *"${{ inputs.data_dir }}"/# directory =  "${{ inputs.data_dir }}"/' \
+                         -e 's/^[ 	]*directory *= *${{ inputs.data_dir }}/# directory =  ${{ inputs.data_dir }}/' \
+                         -e 's/\[tool\.flit\.external-data\]/# [tool.flit.external-data]/' \
+                         pyproject.toml
                   echo "."
                   echo "pyproject.toml:"
                   cat pyproject.toml
