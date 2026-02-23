@@ -15,7 +15,7 @@ on:
       latest_debian_version:
         description: 'The short name of the latest stable Debian version.'
         type: string
-        default: 'bookworm'
+        default: 'trixie'
     outputs:
       entrypoints:
         description: "A whitespace separated list of entrypoints, which are converted to executable Python scripts."

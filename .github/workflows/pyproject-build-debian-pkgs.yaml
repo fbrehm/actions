@@ -30,11 +30,11 @@ on:
       latest_debian_version:
         description: 'The short name of the latest stable Debian version.'
         type: string
-        default: 'bookworm'
+        default: 'trixie'
       debian_versions:
         description: 'Whitespace separated list of Debian and Ubuntu versions to build the package for.'
         type: string
-        default: 'debian-bullseye debian-bookworm debian-trixie ubuntu-focal ubuntu-jammy ubuntu-noble'
+        default: 'debian-bookworm debian-trixie debian-forky ubuntu-noble ubuntu-resolute'
       additional_debian_build_packages:
         description: "A withespace separated list of packages additional to the base build packages"
         type: string
@@ -133,21 +133,6 @@ jobs:
             deb_version_lc=$( echo "${deb_version}" | tr '[:upper:]' '[:lower:]' )
             echo "Performing Debian version '${deb_version}' -> '${deb_version_lc}'"
             case "${deb_version_lc}" in
-              debian-bullseye|bullseye|debian-11)
-                if [[ "${first_distro}" != 'y' ]] ; then
-                  matrix_json+=", "
-                fi
-                matrix_json+="{"
-                matrix_json+="\"title\": \"Debian 11 Bullseye\", "
-                matrix_json+="\"distributor\": \"Debian\", "
-                matrix_json+="\"os_codename\": \"bullseye\", "
-                matrix_json+="\"os_release\": \"11\", "
-                matrix_json+="\"container\": \"debian:bullseye\", "
-                matrix_json+="\"version_prefix\": \"deb11\", "
-                matrix_json+="\"compat\": \"12\""
-                matrix_json+="}"
-                echo "::notice title=Define Debian build matrix::Adding Debian 11 Bullseye"
-                ;;
               debian-bookworm|bookworm|debian-12)
                 if [[ "${first_distro}" != 'y' ]] ; then
                   matrix_json+=", "
@@ -208,36 +193,6 @@ jobs:
                 matrix_json+="}"
                 echo "::notice title=Define Debian build matrix::Adding Debian 15 Duke"
                 ;;
-              ubuntu-focal|focal|ubuntu-20.04)
-                if [[ "${first_distro}" != 'y' ]] ; then
-                  matrix_json+=", "
-                fi
-                matrix_json+="{"
-                matrix_json+="\"title\": \"Ubuntu 20.04 Focal Fossa\", "
-                matrix_json+="\"distributor\": \"Ubuntu\", "
-                matrix_json+="\"os_codename\": \"focal\", "
-                matrix_json+="\"os_release\": \"20.04\", "
-                matrix_json+="\"container\": \"ubuntu:focal\", "
-                matrix_json+="\"version_prefix\": \"ubuntu20.04\", "
-                matrix_json+="\"compat\": \"12\""
-                matrix_json+="}"
-                echo "::notice title=Define Debian build matrix::Adding Ubuntu 20.04 Focal Fossa"
-                ;;
-              ubuntu-jammy|jammy|ubuntu-22.04)
-                if [[ "${first_distro}" != 'y' ]] ; then
-                  matrix_json+=", "
-                fi
-                matrix_json+="{"
-                matrix_json+="\"title\": \"Ubuntu 22.04 Jammy Jellyfish\", "
-                matrix_json+="\"distributor\": \"Ubuntu\", "
-                matrix_json+="\"os_codename\": \"jammy\", "
-                matrix_json+="\"os_release\": \"22.04\", "
-                matrix_json+="\"container\": \"ubuntu:jammy\", "
-                matrix_json+="\"version_prefix\": \"ubuntu22.04\", "
-                matrix_json+="\"compat\": \"12\""
-                matrix_json+="}"
-                echo "::notice title=Define Debian build matrix::Adding Ubuntu 22.04 Jammy Jellyfish"
-                ;;
               ubuntu-noble|noble|ubuntu-24.04)
                 if [[ "${first_distro}" != 'y' ]] ; then
                   matrix_json+=", "
@@ -252,6 +207,21 @@ jobs:
                 matrix_json+="\"compat\": \"12\""
                 matrix_json+="}"
                 echo "::notice title=Define Debian build matrix::Adding Ubuntu 24.04 Noble Numbat"
+                ;;
+              ubuntu-resolute|resolute|ubuntu-26.04)
+                if [[ "${first_distro}" != 'y' ]] ; then
+                  matrix_json+=", "
+                fi
+                matrix_json+="{"
+                matrix_json+="\"title\": \"Ubuntu 26.04 Resolute Raccoon\", "
+                matrix_json+="\"distributor\": \"Ubuntu\", "
+                matrix_json+="\"os_codename\": \"resolute\", "
+                matrix_json+="\"os_release\": \"26.04\", "
+                matrix_json+="\"container\": \"ubuntu:resolute\", "
+                matrix_json+="\"version_prefix\": \"ubuntu26.04\", "
+                matrix_json+="\"compat\": \"13\""
+                matrix_json+="}"
+                echo "::notice title=Define Debian build matrix::Adding Ubuntu 26.04 Resolute Raccoon"
                 ;;
               *)
                 echo "::error title=Define Debian build matrix::Unknown Debian or Ubuntu version '${deb_version}' given." >&2
