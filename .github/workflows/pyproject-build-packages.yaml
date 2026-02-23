@@ -63,7 +63,7 @@ on:
       debian_versions:
         description: 'Whitespace separated list of Debian and Ubuntu version to build the package for.'
         type: string
-        default: 'debian-bookworm debian-trixie debian-forky ubuntu-noble ubuntu-resolute'
+        default: 'debian-bookworm debian-trixie debian-forky ubuntu-jammy ubuntu-noble ubuntu-resolute'
       el_versions:
         description: 'Whitespace separated list of Enterprise Linux versions to build the package for.'
         type: string
