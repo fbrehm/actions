@@ -18,7 +18,7 @@ on:
       latest_debian_version:
         description: 'The short name of the latest stable Debian version.'
         type: string
-        default: 'bookworm'
+        default: 'trixie'
 
 ################################################################################
 jobs:
