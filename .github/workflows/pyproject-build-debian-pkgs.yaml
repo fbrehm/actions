@@ -34,7 +34,7 @@ on:
       debian_versions:
         description: 'Whitespace separated list of Debian and Ubuntu versions to build the package for.'
         type: string
-        default: 'debian-bookworm debian-trixie debian-forky ubuntu-jammy ubuntu-noble ubuntu-resolute'
+        default: 'debian-bookworm debian-trixie debian-forky ubuntu-noble ubuntu-resolute'
       additional_debian_build_packages:
         description: "A withespace separated list of packages additional to the base build packages"
         type: string
@@ -192,21 +192,6 @@ jobs:
                 matrix_json+="\"compat\": \"15\""
                 matrix_json+="}"
                 echo "::notice title=Define Debian build matrix::Adding Debian 15 Duke"
-                ;;
-              ubuntu-jammy|jammy|ubuntu-22.04)
-                if [[ "${first_distro}" != 'y' ]] ; then
-                  matrix_json+=", "
-                fi
-                matrix_json+="{"
-                matrix_json+="\"title\": \"Ubuntu 22.04 Jammy Jellyfish\", "
-                matrix_json+="\"distributor\": \"Ubuntu\", "
-                matrix_json+="\"os_codename\": \"jammy\", "
-                matrix_json+="\"os_release\": \"22.04\", "
-                matrix_json+="\"container\": \"ubuntu:jammy\", "
-                matrix_json+="\"version_prefix\": \"ubuntu22.04\", "
-                matrix_json+="\"compat\": \"12\""
-                matrix_json+="}"
-                echo "::notice title=Define Debian build matrix::Adding Ubuntu 22.04 Jammy Jellyfish"
                 ;;
               ubuntu-noble|noble|ubuntu-24.04)
                 if [[ "${first_distro}" != 'y' ]] ; then
