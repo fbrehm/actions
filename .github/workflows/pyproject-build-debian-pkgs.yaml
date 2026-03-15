@@ -305,6 +305,39 @@ jobs:
           manage_locales: false
           install_flit: true
 
+      - name: "Remove python package tomli as a dependency"
+        id: remove-tomli-dependency
+        shell: bash
+        run: |
+            echo '.'
+            echo "Checking Python version ..."
+            python3 --version
+            if python3 --version | grep -P -q '\s3\.(1[1-9]|[2-9]\d' ; then
+                if grep -q -w 'tomli' pyproject.toml ; then
+                    echo '.'
+                    echo "Removing all occurences of 'tomli' from pyproject.toml ..."
+                    sed -i -e '/^[ 	]*tomli,[ 	]*$/d' -e '/^[ 	]*"tomli",/d' -e "/^[ 	]'tomli',/d" pyproject.toml | true
+                    if grep -q -w 'tomli' pyproject.toml ; then
+                        echo "Could not remove 'tomli' completely from pyproject.toml." >&2
+                        exit 5
+                    fi
+                    echo "Mangled pyproject.toml:"
+                    cat pyproject.toml
+                fi
+                if grep -q -w 'python3-tomli' debian/control ; then
+                    echo '.'
+                    echo "Removing all occurences of 'tomli' debian/control ..."
+                    sed -i -e 's/ python3-tomli,//g' debian/control
+                    sed -i -e '/^[ 	][ 	]*$/d' debian/control
+                    if grep -q -w 'python3-tomli' debian/control ; then
+                        echo "Could not remove 'python3-tomli' completely from debian/control." >&2
+                        exit 5
+                    fi
+                    echo "Mangled debian/control:"
+                    cat debian/control
+                fi
+            fi
+
       - name: 'Preparing GPG for signing files without entering a password'
         id: setup-gpg
         uses: fbrehm/github-setup-gpg@main
