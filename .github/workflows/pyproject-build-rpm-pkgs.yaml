@@ -460,11 +460,10 @@ jobs:
         run: |
             echo '.'
             echo "KEEP_TOMLI: '${KEEP_TOMLI}'"
-            echo '.'
-            echo "Checking Python version ..."
-            python3 --version
-            if "${KEEP_TOMLI}" == false ; then
-                # if python3 --version | grep -P -q '\s3\.(1[1-9]|[2-9]\d)' && "${KEEP_TOMLI}" == false ; then
+            if [[ "${KEEP_TOMLI}" == false ]} ; then
+                echo '.'
+                echo "Checking Python version ..."
+                python3 --version
                 if python3 --version | grep -P -q '\s3\.(1[1-9]|[2-9]\d)'; then
                     echo "Checking for tomli in pyproject.toml ..."
                     if grep -q -w -P 'tomli[^-_a-z0-9]' pyproject.toml ; then
