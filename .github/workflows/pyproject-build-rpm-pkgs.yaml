@@ -485,7 +485,7 @@ jobs:
                     if grep -q -w -P 'python.*-tomli([^-_a-z0-9]|$)' ${template} ; then
                         echo '.'
                         echo "Removing all occurences of 'tomli' in ${template} ..."
-                        sed -i -e '/python.*-tomli([^-_a-z0-9]|$)/d' ${template}
+                        sed -i -e '/python.*-tomli[^-_a-z0-9]*$/d' ${template}
                         echo '.'
                         echo "::group::Mangled ${template}"
                         cat ${template}
