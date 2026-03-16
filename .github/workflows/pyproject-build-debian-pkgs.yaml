@@ -510,14 +510,14 @@ jobs:
                     sed -i -e 's/[ 	][ 	]*tomli[, 	]/ /g' -e 's/[ 	]*"tomli"[, 	]/ /g' -e "s/[ 	]*'tomli'[, 	]/ /g" pyproject.toml
                     sed -i -e '/^[ 	][ 	]*$/d' pyproject.toml
                     # sed -i -e '/^[ 	]*tomli,[ 	]*$/d' -e '/^[ 	]*"tomli",/d' -e "/^[ 	]'tomli',/d" pyproject.toml | true
-                    if grep -q -w 'tomli' pyproject.toml ; then
-                        echo "Could not remove 'tomli' completely from pyproject.toml." >&2
-                        exit 5
-                    fi
                     echo '.'
                     echo "::group::Mangled pyproject.toml"
                     cat pyproject.toml
                     echo "::endgroup::"
+                    if grep -w 'tomli' pyproject.toml ; then
+                        echo "Could not remove 'tomli' completely from pyproject.toml." >&2
+                        exit 5
+                    fi
                 fi
                 echo "Checking for tomli in debian/control ..."
                 if grep -q -w 'python3-tomli' debian/control ; then
@@ -525,14 +525,14 @@ jobs:
                     echo "Removing all occurences of 'tomli' debian/control ..."
                     sed -i -e 's/ python3-tomli,//g' debian/control
                     sed -i -e '/^[ 	][ 	]*$/d' debian/control
-                    if grep -q -w 'python3-tomli' debian/control ; then
-                        echo "Could not remove 'python3-tomli' completely from debian/control." >&2
-                        exit 5
-                    fi
                     echo '.'
                     echo "::group::Mangled debian/control"
                     cat debian/control
                     echo "::endgroup::"
+                    if grep -w 'python3-tomli' debian/control ; then
+                        echo "Could not remove 'python3-tomli' completely from debian/control." >&2
+                        exit 5
+                    fi
                 fi
             fi
 
