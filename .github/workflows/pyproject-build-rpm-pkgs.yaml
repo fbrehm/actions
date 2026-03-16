@@ -463,36 +463,38 @@ jobs:
             echo '.'
             echo "Checking Python version ..."
             python3 --version
-            if python3 --version | grep -P -q '\s3\.(1[1-9]|[2-9]\d)' && "${KEEP_TOMLI}" == false ; then
-              # if python3 --version | grep -P -q '\s3\.(1[1-9]|[2-9]\d)'; then
-                echo "Checking for tomli in pyproject.toml ..."
-                if grep -q -w -P 'tomli[^-_a-z0-9]' pyproject.toml ; then
-                    echo '.'
-                    echo "Removing all occurences of 'tomli' from pyproject.toml ..."
-                    sed -i -e 's/[ 	][ 	]*tomli[, 	]/ /g' -e 's/[ 	]*"tomli"[, 	]/ /g' -e "s/[ 	]*'tomli'[, 	]/ /g" pyproject.toml
-                    sed -i -e '/^[ 	][ 	]*$/d' pyproject.toml
-                    echo '.'
-                    echo "::group::Mangled pyproject.toml"
-                    cat pyproject.toml
-                    echo "::endgroup::"
-                    if grep -w -P 'tomli[^-_a-z0-9]' pyproject.toml ; then
-                        echo "Could not remove 'tomli' completely from pyproject.toml." >&2
-                        exit 5
+            if "${KEEP_TOMLI}" == false ; then
+                # if python3 --version | grep -P -q '\s3\.(1[1-9]|[2-9]\d)' && "${KEEP_TOMLI}" == false ; then
+                if python3 --version | grep -P -q '\s3\.(1[1-9]|[2-9]\d)'; then
+                    echo "Checking for tomli in pyproject.toml ..."
+                    if grep -q -w -P 'tomli[^-_a-z0-9]' pyproject.toml ; then
+                        echo '.'
+                        echo "Removing all occurences of 'tomli' from pyproject.toml ..."
+                        sed -i -e 's/[ 	][ 	]*tomli[, 	]/ /g' -e 's/[ 	]*"tomli"[, 	]/ /g' -e "s/[ 	]*'tomli'[, 	]/ /g" pyproject.toml
+                        sed -i -e '/^[ 	][ 	]*$/d' pyproject.toml
+                        echo '.'
+                        echo "::group::Mangled pyproject.toml"
+                        cat pyproject.toml
+                        echo "::endgroup::"
+                        if grep -w -P 'tomli[^-_a-z0-9]' pyproject.toml ; then
+                            echo "Could not remove 'tomli' completely from pyproject.toml." >&2
+                            exit 5
+                        fi
                     fi
-                fi
-                template="${{ inputs.template_specfile }}"
-                echo "Checking for tomli in ${template} ..."
-                if grep -q -w -P 'python.*-tomli([^-_a-z0-9]|$)' ${template} ; then
-                    echo '.'
-                    echo "Removing all occurences of 'tomli' in ${template} ..."
-                    sed -i -e '/python.*-tomli([^-_a-z0-9]|$)/d' ${template}
-                    echo '.'
-                    echo "::group::Mangled ${template}"
-                    cat ${template}
-                    echo "::endgroup::"
-                    if grep -w -P 'python.*-tomli([^-_a-z0-9]|$)' ${template} ; then
-                        echo "Could not remove 'python3-tomli' completely from ${template}." >&2
-                        exit 5
+                    template="${{ inputs.template_specfile }}"
+                    echo "Checking for tomli in ${template} ..."
+                    if grep -q -w -P 'python.*-tomli([^-_a-z0-9]|$)' ${template} ; then
+                        echo '.'
+                        echo "Removing all occurences of 'tomli' in ${template} ..."
+                        sed -i -e '/python.*-tomli([^-_a-z0-9]|$)/d' ${template}
+                        echo '.'
+                        echo "::group::Mangled ${template}"
+                        cat ${template}
+                        echo "::endgroup::"
+                        if grep -w -P 'python.*-tomli([^-_a-z0-9]|$)' ${template} ; then
+                            echo "Could not remove 'python3-tomli' completely from ${template}." >&2
+                            exit 5
+                        fi
                     fi
                 fi
             fi
