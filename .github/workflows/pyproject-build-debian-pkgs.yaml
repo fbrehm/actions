@@ -329,8 +329,10 @@ jobs:
                         echo "Could not remove 'tomli' completely from pyproject.toml." >&2
                         exit 5
                     fi
-                    echo "Mangled pyproject.toml:"
+                    echo '.'
+                    echo "::group::Mangled pyproject.toml"
                     cat pyproject.toml
+                    echo "::endgroup::"
                 fi
                 if grep -q -w 'python3-tomli' debian/control ; then
                     echo '.'
@@ -341,8 +343,10 @@ jobs:
                         echo "Could not remove 'python3-tomli' completely from debian/control." >&2
                         exit 5
                     fi
-                    echo "Mangled debian/control:"
+                    echo '.'
+                    echo "::group::Mangled debian/control"
                     cat debian/control
+                    echo "::endgroup::"
                 fi
             fi
 
