@@ -283,6 +283,7 @@ jobs:
       timezone: ${{ inputs.timezone }}
       entrypoints: ${{ needs.check-src.outputs.entrypoints }}
       data_dir: ${{ needs.check-src.outputs.data_dir }}
+      keep_tomli: ${{ inputs.keep_tomli }}
       revision: ${{ inputs.revision }}
     secrets:
       key_password: ${{ secrets.key_password }}
