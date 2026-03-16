@@ -460,7 +460,7 @@ jobs:
         run: |
             echo '.'
             echo "KEEP_TOMLI: '${KEEP_TOMLI}'"
-            if [[ "${KEEP_TOMLI}" == false ]} ; then
+            if [[ "${KEEP_TOMLI}" == false ]] ; then
                 echo '.'
                 echo "Checking Python version ..."
                 python3 --version
