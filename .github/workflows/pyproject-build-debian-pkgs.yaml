@@ -61,6 +61,10 @@ on:
         description: "The data directory for containing man pages, i18n files a.s.o."
         type: string
         default: ''
+      keep_tomli:
+        description: "Keeping dependencies to Python tomli, even it is Python version >= 3.11."
+        type: boolean
+        default: false
       revision:
         description: "Revision count for current version."
         type: string
@@ -306,17 +310,21 @@ jobs:
           install_flit: true
 
       - name: "Remove python package tomli as a dependency"
+        env:
+          KEEP_TOMLI: ${{ inputs.keep_tomli }}
         id: remove-tomli-dependency
         shell: bash
         run: |
             echo '.'
             echo "Checking Python version ..."
             python3 --version
-            if python3 --version | grep -P -q '\s3\.(1[1-9]|[2-9]\d' ; then
+            if python3 --version | grep -P -q '\s3\.(1[1-9]|[2-9]\d' && "${KEEP_TOMLI}" == false ; then
                 if grep -q -w 'tomli' pyproject.toml ; then
                     echo '.'
                     echo "Removing all occurences of 'tomli' from pyproject.toml ..."
-                    sed -i -e '/^[ 	]*tomli,[ 	]*$/d' -e '/^[ 	]*"tomli",/d' -e "/^[ 	]'tomli',/d" pyproject.toml | true
+                    sed -i -e 's/[ 	][ 	]*tomli[, 	]/ /g' -e 's/[ 	]*"tomli"[, 	]/ /g' -e "s/[ 	]*'tomli'[, 	]/ /g" pyproject.toml
+                    sed -i -e '/^[ 	][ 	]*$/d' pyproject.toml
+                    # sed -i -e '/^[ 	]*tomli,[ 	]*$/d' -e '/^[ 	]*"tomli",/d' -e "/^[ 	]'tomli',/d" pyproject.toml | true
                     if grep -q -w 'tomli' pyproject.toml ; then
                         echo "Could not remove 'tomli' completely from pyproject.toml." >&2
                         exit 5
