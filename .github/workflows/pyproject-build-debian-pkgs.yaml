@@ -309,47 +309,6 @@ jobs:
           manage_locales: false
           install_flit: true
 
-      - name: "Remove python package tomli as a dependency"
-        env:
-          KEEP_TOMLI: ${{ inputs.keep_tomli }}
-        id: remove-tomli-dependency
-        shell: bash
-        run: |
-            echo '.'
-            echo "Checking Python version ..."
-            python3 --version
-            if python3 --version | grep -P -q '\s3\.(1[1-9]|[2-9]\d' && "${KEEP_TOMLI}" == false ; then
-                if grep -q -w 'tomli' pyproject.toml ; then
-                    echo '.'
-                    echo "Removing all occurences of 'tomli' from pyproject.toml ..."
-                    sed -i -e 's/[ 	][ 	]*tomli[, 	]/ /g' -e 's/[ 	]*"tomli"[, 	]/ /g' -e "s/[ 	]*'tomli'[, 	]/ /g" pyproject.toml
-                    sed -i -e '/^[ 	][ 	]*$/d' pyproject.toml
-                    # sed -i -e '/^[ 	]*tomli,[ 	]*$/d' -e '/^[ 	]*"tomli",/d' -e "/^[ 	]'tomli',/d" pyproject.toml | true
-                    if grep -q -w 'tomli' pyproject.toml ; then
-                        echo "Could not remove 'tomli' completely from pyproject.toml." >&2
-                        exit 5
-                    fi
-                    echo '.'
-                    echo "::group::Mangled pyproject.toml"
-                    cat pyproject.toml
-                    echo "::endgroup::"
-                fi
-                if grep -q -w 'python3-tomli' debian/control ; then
-                    echo '.'
-                    echo "Removing all occurences of 'tomli' debian/control ..."
-                    sed -i -e 's/ python3-tomli,//g' debian/control
-                    sed -i -e '/^[ 	][ 	]*$/d' debian/control
-                    if grep -q -w 'python3-tomli' debian/control ; then
-                        echo "Could not remove 'python3-tomli' completely from debian/control." >&2
-                        exit 5
-                    fi
-                    echo '.'
-                    echo "::group::Mangled debian/control"
-                    cat debian/control
-                    echo "::endgroup::"
-                fi
-            fi
-
       - name: 'Preparing GPG for signing files without entering a password'
         id: setup-gpg
         uses: fbrehm/github-setup-gpg@main
@@ -530,6 +489,49 @@ jobs:
           echo "Setting system timezone to '${TZ}' ..."
           ln -fvs /usr/share/zoneinfo/${{ inputs.timezone }} /etc/localtime
           echo "Current date: $( date --rfc-3339=seconds )"
+
+      - name: "Remove python package tomli as a dependency"
+        env:
+          KEEP_TOMLI: ${{ inputs.keep_tomli }}
+        id: remove-tomli-dependency
+        shell: bash
+        run: |
+            echo '.'
+            echo "KEEP_TOMLI: '${KEEP_TOMLI}'"
+            echo '.'
+            echo "Checking Python version ..."
+            python3 --version
+            if python3 --version | grep -P -q '\s3\.(1[1-9]|[2-9]\d)' && "${KEEP_TOMLI}" == false ; then
+                if grep -q -w 'tomli' pyproject.toml ; then
+                    echo '.'
+                    echo "Removing all occurences of 'tomli' from pyproject.toml ..."
+                    sed -i -e 's/[ 	][ 	]*tomli[, 	]/ /g' -e 's/[ 	]*"tomli"[, 	]/ /g' -e "s/[ 	]*'tomli'[, 	]/ /g" pyproject.toml
+                    sed -i -e '/^[ 	][ 	]*$/d' pyproject.toml
+                    # sed -i -e '/^[ 	]*tomli,[ 	]*$/d' -e '/^[ 	]*"tomli",/d' -e "/^[ 	]'tomli',/d" pyproject.toml | true
+                    if grep -q -w 'tomli' pyproject.toml ; then
+                        echo "Could not remove 'tomli' completely from pyproject.toml." >&2
+                        exit 5
+                    fi
+                    echo '.'
+                    echo "::group::Mangled pyproject.toml"
+                    cat pyproject.toml
+                    echo "::endgroup::"
+                fi
+                if grep -q -w 'python3-tomli' debian/control ; then
+                    echo '.'
+                    echo "Removing all occurences of 'tomli' debian/control ..."
+                    sed -i -e 's/ python3-tomli,//g' debian/control
+                    sed -i -e '/^[ 	][ 	]*$/d' debian/control
+                    if grep -q -w 'python3-tomli' debian/control ; then
+                        echo "Could not remove 'python3-tomli' completely from debian/control." >&2
+                        exit 5
+                    fi
+                    echo '.'
+                    echo "::group::Mangled debian/control"
+                    cat debian/control
+                    echo "::endgroup::"
+                fi
+            fi
 
       - name: "Installing Python 3 .."
         shell: bash
