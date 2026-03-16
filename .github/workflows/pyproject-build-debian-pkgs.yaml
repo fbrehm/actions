@@ -504,23 +504,22 @@ jobs:
             # if python3 --version | grep -P -q '\s3\.(1[1-9]|[2-9]\d)' && "${KEEP_TOMLI}" == false ; then
             if python3 --version | grep -P -q '\s3\.(1[1-9]|[2-9]\d)'; then
                 echo "Checking for tomli in pyproject.toml ..."
-                if grep -q -w 'tomli' pyproject.toml ; then
+                if grep -q -w -P 'tomli[^-_a-z0-9]' pyproject.toml ; then
                     echo '.'
                     echo "Removing all occurences of 'tomli' from pyproject.toml ..."
                     sed -i -e 's/[ 	][ 	]*tomli[, 	]/ /g' -e 's/[ 	]*"tomli"[, 	]/ /g' -e "s/[ 	]*'tomli'[, 	]/ /g" pyproject.toml
                     sed -i -e '/^[ 	][ 	]*$/d' pyproject.toml
-                    # sed -i -e '/^[ 	]*tomli,[ 	]*$/d' -e '/^[ 	]*"tomli",/d' -e "/^[ 	]'tomli',/d" pyproject.toml | true
                     echo '.'
                     echo "::group::Mangled pyproject.toml"
                     cat pyproject.toml
                     echo "::endgroup::"
-                    if grep -w 'tomli' pyproject.toml ; then
+                    if grep -w -P 'tomli[^-_a-z0-9]' pyproject.toml ; then
                         echo "Could not remove 'tomli' completely from pyproject.toml." >&2
                         exit 5
                     fi
                 fi
                 echo "Checking for tomli in debian/control ..."
-                if grep -q -w 'python3-tomli' debian/control ; then
+                if grep -q -w -P 'python3-tomli[^-_a-z0-9]' debian/control ; then
                     echo '.'
                     echo "Removing all occurences of 'tomli' debian/control ..."
                     sed -i -e 's/ python3-tomli,//g' debian/control
@@ -529,7 +528,7 @@ jobs:
                     echo "::group::Mangled debian/control"
                     cat debian/control
                     echo "::endgroup::"
-                    if grep -w 'python3-tomli' debian/control ; then
+                    if grep -w -P 'python3-tomli[^-_a-z0-9]' debian/control ; then
                         echo "Could not remove 'python3-tomli' completely from debian/control." >&2
                         exit 5
                     fi
