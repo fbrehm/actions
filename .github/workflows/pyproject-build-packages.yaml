@@ -15,6 +15,10 @@ on:
         description: 'A human readable name of the user, which will be used to update debian/chagelog.'
         type: string
         default: 'Frank Brehm'
+      python_in_pkg_basename:
+        description: "Is the prefix 'python3-' included in the package basename?"
+        type: boolean
+        default: true
       has_i18n:
         description: 'Does the package support localisation and internationalisation?'
         type: boolean

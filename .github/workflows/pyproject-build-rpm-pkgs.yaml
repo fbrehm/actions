@@ -15,6 +15,10 @@ on:
         description: 'A human readable name of the user, which will be used to update debian/chagelog.'
         type: string
         default: 'Frank Brehm'
+      python_in_pkg_basename:
+        description: "Is the prefix 'python3-' included in the package basename?"
+        type: boolean
+        default: true
       has_i18n:
         description: 'Does the package support localisation and internationalisation?'
         type: boolean
@@ -237,6 +241,7 @@ jobs:
       matrix: ${{ fromJSON(needs.define-rpm-build-matrix.outputs.matrix) }}
     env:
       PYTHON: "python${{ matrix.py_version_nodot}}"
+      PYTHON_IN_PKG_BASENAME: "${{ inputs.python_in_pkg_basename }}"
       USED_CHARSET: 'utf8'
       USED_LOCALE: 'en_US'
       USED_LC: 'en_US.utf8'
@@ -261,7 +266,11 @@ jobs:
           export PKG_BUILD_VERSION="${PKG_VERSION}-${PKG_RELEASE}"
           export OS_TITLE=$( cat /etc/os-release | grep '^PRETTY_NAME=' | sed -e 's/^PRETTY_NAME=//' -e 's/"//g' )
           export TZ="${{ inputs.timezone }}"
-          export RPM_SRC_DIR_BASE="${PYTHON}-${PKG_NAME}-${PKG_VERSION}"
+          if [[ "${PYTHON_IN_PKG_BASENAME}" == true ]] ; then
+              export RPM_SRC_DIR_BASE="${PYTHON}-${PKG_NAME}-${PKG_VERSION}"
+          else
+              export RPM_SRC_DIR_BASE="${PKG_NAME}-${PKG_VERSION}"
+          fi
           export RPM_SRC_DIR="rpmdir/SOURCES/${RPM_SRC_DIR_BASE}"
           export SPECFILE="${PKG_NAME}.spec"
           export SPECFILE_TEMPLATE="template.spec"
