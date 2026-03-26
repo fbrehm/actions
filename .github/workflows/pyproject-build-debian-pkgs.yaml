@@ -382,7 +382,7 @@ jobs:
         run: |
           echo '.'
           echo "Setting debian/compat to ${{ inputs.compat_latest_debian }} ..."
-          echo "${{ inputs.password_file }}" > debian/compat
+          echo "${{ inputs.compat_latest_debian }}" > debian/compat
 
           echo '.'
           PASSWORD_FILE_ABS=$( readlink --canonicalize-missing "${{ inputs.password_file }}" )
