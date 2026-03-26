@@ -31,6 +31,10 @@ on:
         description: 'The short name of the latest stable Debian version.'
         type: string
         default: 'trixie'
+      compat_latest_debian:
+        description: 'The compatibility level of dh in the latest Debian version.'
+        type: string
+        default: '13'
       debian_versions:
         description: 'Whitespace separated list of Debian and Ubuntu versions to build the package for.'
         type: string
@@ -376,6 +380,10 @@ jobs:
         id: build-source-package
         shell: bash
         run: |
+          echo '.'
+          echo "Setting debian/compat to ${{ inputs.compat_latest_debian }} ..."
+          echo "${{ inputs.password_file }}" > debian/compat
+
           echo '.'
           PASSWORD_FILE_ABS=$( readlink --canonicalize-missing "${{ inputs.password_file }}" )
           echo "Password file: '${PASSWORD_FILE_ABS}'"
