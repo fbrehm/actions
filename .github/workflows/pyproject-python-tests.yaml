@@ -147,6 +147,7 @@ jobs:
               if [[ "${test_version}" == "3.10" ]] ; then
                   echo "Python ${{ matrix.python_version }} is not affected."
               else
+                  echo "::notice title=Changing dependency to pyvmomi::Setting dependency to pyvmomi < 9.1.0.0 because of Python ${{ matrix.python_version }}."
                   echo "Patching pyproject.toml for dependency to pyvmomi < 9.1.0.0 ..."
                   sed -i -e 's/"pyvmomi"/"pyvmomi <9.1.0.0"/g' pyproject.toml
                   echo "Show patched dependencies:"
