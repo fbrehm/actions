@@ -132,6 +132,28 @@ jobs:
         with:
           to_data_dir: false
 
+      - name: "Checking for dependency to pyvmomi ..."
+        id: check-pyvmomi
+        shell: bash
+        run: |
+          if [[ ! -f pyproject.toml ]] ; then
+              echo "::error::File pyproject.toml not found."
+              exit 5
+          fi
+          if grep -P -i -q '"pyvmomi"' pyproject.toml ; then
+              echo "Found dependency to 'pyvmomi' in pyproject.toml."
+              echo "Testing for Python < 3.10 ..."
+              test_version=$( echo -e "${{ matrix.python_version }}\n3.10" | sort --version-sort | head -n 1 )
+              if [[ "${test_version}" == "3.10" ]] ; then
+                  echo "Python ${{ matrix.python_version }} is not affected."
+              else
+                  echo "Patching pyproject.toml for dependency to pyvmomi < 9.1.0.0 ..."
+                  sed -i -e 's/"pyvmomi"/"pyvmomi <9.1.0.0"/g' pyproject.toml
+                  echo "Show patched dependencies:"
+                  grep -P -i '"pyvmomi' pyproject.toml
+              fi
+          fi
+
       - name: "Installing PIP modules and linter tools"
         uses: fbrehm/actions/.github/actions/pyproject-install-pip-modules@main
         with:
