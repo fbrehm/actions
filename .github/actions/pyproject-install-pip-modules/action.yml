@@ -91,10 +91,17 @@ runs:
         echo '.'
         echo "Activating virtual environment '.venv'."
         source .venv/bin/activate
+
         echo "Installing flit with pip ..."
         echo "::group::PIP install flit"
         pip install flit
         echo "::endgroup::"
+
+        echo "Installing fb-logging with pip ..."
+        echo "::group::PIP install fb-logging"
+        pip install fb-logging
+        echo "::endgroup::"
+
         echo "Installing all necessary packages with flit ..."
         echo "::group::Flit --only-deps --deps production ---python .venv/bin/python3"
         flit install --only-deps --deps production --python .venv/bin/python3
