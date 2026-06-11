@@ -199,4 +199,18 @@ jobs:
           echo -e "Checking with yamllint: ${yamlfiles}"
           yamllint ${yamlfiles}
 
+      - name: Execute Check CHANGELOG.md
+        shell: bash
+        run: |
+          source .venv/bin/activate
+          for FILE in $( ls -1 ) ; do
+              if [[ ! -f "${FILE}" ]] ; then
+                  continue
+              fi
+              if echo "${FILE}" | grep -P -i -q '^CHANGELOG\.(md|markdown)$' ; then
+                  echo " * Checking '${FILE}':"
+                  check-changelog "${FILE}"
+              fi
+          done
+
 # vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list

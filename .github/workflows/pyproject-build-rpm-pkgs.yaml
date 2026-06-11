@@ -514,6 +514,7 @@ jobs:
           echo '.'; echo "Installing Python ${{ matrix.py_version_nodot}} ..."
 
           declare -a pkg_list=(
+            "fb-logging"
             "pyproject-rpm-macros"
             "${PYTHON}"
             "${PYTHON}-babel"
