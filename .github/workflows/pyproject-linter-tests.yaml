@@ -202,6 +202,7 @@ jobs:
       - name: Execute Check CHANGELOG.md
         shell: bash
         run: |
+          source .venv/bin/activate
           for FILE in $( ls -1 ) ; do
               if [[ ! -f "${FILE}" ]] ; then
                   continue
