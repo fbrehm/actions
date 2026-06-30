@@ -381,10 +381,6 @@ jobs:
         shell: bash
         run: |
           echo '.'
-          echo "Setting debian/compat to ${{ inputs.compat_latest_debian }} ..."
-          echo "${{ inputs.compat_latest_debian }}" > debian/compat
-
-          echo '.'
           PASSWORD_FILE_ABS=$( readlink --canonicalize-missing "${{ inputs.password_file }}" )
           echo "Password file: '${PASSWORD_FILE_ABS}'"
 
@@ -766,10 +762,6 @@ jobs:
         id: build-bin-package
         shell: bash
         run: |
-          echo '.'
-          echo "Setting debian/compat to ${{ matrix.compat }}"
-          echo "${{ matrix.compat }}" > debian/compat
-
           echo '.'
           if [[ -e "${{ inputs.password_file }}" && -x "${SIGNING_HOOK_SCRIPT}" ]] ; then
               echo "::notice title=build-debian-sorce-package::Building signed Debian binary package for ${PKG_NAME}-${BUILD_VERSION}"
