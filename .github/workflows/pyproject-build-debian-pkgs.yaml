@@ -390,7 +390,7 @@ jobs:
               fi
           fi
           if grep -w -q debhelper-compat debian/control ; then
-              sed -i -e "s/debhelper-compat  *(= *[0-9][0-9]*)/debhelper-compat (= 14)/" debian/control
+              sed -i -e "s/debhelper-compat  *(= *[0-9][0-9]*)/debhelper-compat (= ${{ inputs.compat_latest_debian }})/" debian/control
               echo -n "Patched debian/control: "
               grep -w debhelper-compat debian/control
           else
@@ -790,7 +790,7 @@ jobs:
               fi
           fi
           if grep -w -q debhelper-compat debian/control ; then
-              sed -i -e "s/debhelper-compat  *(= *[0-9][0-9]*)/debhelper-compat (= 14)/" debian/control
+              sed -i -e "s/debhelper-compat  *(= *[0-9][0-9]*)/debhelper-compat (= ${{ matrix.compat }})/" debian/control
               echo -n "Patched debian/control: "
               grep -w debhelper-compat debian/control
           else
