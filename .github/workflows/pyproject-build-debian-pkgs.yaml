@@ -381,6 +381,24 @@ jobs:
         shell: bash
         run: |
           echo '.'
+          echo "Checking for compat level ${{ inputs.compat_latest_debian }} ..."
+          echo "Compat level for Debian ${{ inputs.latest_debian_version }} is ${{ inputs.compat_latest_debian }}."
+          if [[ "${{ inputs.compat_latest_debian }}" -gt 14 ]] ; then
+              if [[ -f debian/compat ]] ; then
+                  echo "::notice title=Removing debian/compat::Removing debian/compat for Debian ${{ inputs.latest_debian_version }} on building source package."
+                  rm -fv debian/compat
+              fi
+          fi
+          if grep -w -q debhelper-compat debian/control ; then
+              sed -i -e "s/debhelper-compat  *(= *[0-9][0-9]*)/debhelper-compat (= 14)/" debian/control
+              echo -n "Patched debian/control: "
+              grep -w debhelper-compat debian/control
+          else
+              echo "Invalid 'debian/control' - Build-Depends for 'debhelper-compat (= X)' is failing." >&2
+              ecit 5
+          fi
+
+          echo '.'
           PASSWORD_FILE_ABS=$( readlink --canonicalize-missing "${{ inputs.password_file }}" )
           echo "Password file: '${PASSWORD_FILE_ABS}'"
 
@@ -762,6 +780,24 @@ jobs:
         id: build-bin-package
         shell: bash
         run: |
+          echo '.'
+          echo "Checking for compat level ${{ matrix.compat }} ..."
+          echo "Compat level for ${{ matrix.title }} is ${{ matrix.compat }}."
+          if [[ "${{ matrix.compat }}" -gt 14 ]] ; then
+              if [[ -f debian/compat ]] ; then
+                  echo "::notice title=Removing debian/compat::Removing debian/compat for ${{ matrix.title }} on building binary package."
+                  rm -fv debian/compat
+              fi
+          fi
+          if grep -w -q debhelper-compat debian/control ; then
+              sed -i -e "s/debhelper-compat  *(= *[0-9][0-9]*)/debhelper-compat (= 14)/" debian/control
+              echo -n "Patched debian/control: "
+              grep -w debhelper-compat debian/control
+          else
+              echo "Invalid 'debian/control' - Build-Depends for 'debhelper-compat (= X)' is failing." >&2
+              ecit 5
+          fi
+
           echo '.'
           if [[ -e "${{ inputs.password_file }}" && -x "${SIGNING_HOOK_SCRIPT}" ]] ; then
               echo "::notice title=build-debian-sorce-package::Building signed Debian binary package for ${PKG_NAME}-${BUILD_VERSION}"
