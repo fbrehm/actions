@@ -5,6 +5,95 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.12.0] - 2026-10-16
+
+### Added
+
+* Adding Python 3.15 to the Python test versions
+* Addin CHANGLOG.md.
+
+### Fixed
+
+* Fixing Python versions in workflow `pyproject-python-tests`.
+
+## [2.11.0] - 2026-07-01
+
+### Added
+
+* Adding check DH compat level on bulding Debian packages,
+
+### Fixed
+
+* Fixing workflows/pyproject-build-debian-pkgs.yaml
+
+### Removed
+
+* Removing setting debian/compat.
+
+## [2.10.0] - 2026-06-11
+
+### Added
+
+* Adding execution of check of CHANGLOG.md.
+* Adding install of `fb-logging` on creating RPM packages.
+
+### Fixed
+
+* Fixing workflow `pyproject-linter-tests`.
+
+## [2.9.0] - 2026-05-13
+
+### Changed
+
+* Adding dynamic dependency to pyvmomi depending of tested Python version.
+* Adding notice iin workflow `pyproject-python-tests` because of changing dependency to pyvmomi.
+
+## [2.8.0] - 2026-03-26
+
+### Changed
+
+* Explicit setting of compat level in building Debian source packages.
+
+### Fixed
+
+* Fixing workflow `pyproject-build-debian-pkgs`.
+
+## [2.7.0] - 2026-03-18
+
+### Fixed
+
+* Fixing package name in /workflow `pyproject-build-rpm-pkgs`.
+
+## [2.6.0] - 2026-03-16
+
+### Changed
+
+* Changing output in workflow `pyproject-build-debian-pkgs`.
+
+### Fixed
+
+* Fixing workflows pyproject-build-rpm-pkgs and pyproject-build-debian-pkgs.
+
+### Removed
+
+* Removing dependency to 'tomli' for Python >= 3.11.
+* Disable RPM dependencies for python3-tomli on higher Python versions.
+
+## [2.5.0] - 2026-02-23
+
+### Added
+
+* Adding support for Debian Forky and Ubuntu Resolute.
+* Adding support for Python 3.14.
+
+### Fixed
+
+* Fixing typos.
+
+### Removed
+
+* Disable support for Debian Bullseye, Ubuntu Forky and Ubuntu Jammy.
+
 ## [2.4.0] - 2025-11-25
 
 ### Added
@@ -112,6 +201,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Initial commit.
 
+[2.12.0]: https://github.com/fbrehm/actions/compare/v2.11...v2.12
+[2.11.0]: https://github.com/fbrehm/actions/compare/v2.10...v2.11
+[2.10.0]: https://github.com/fbrehm/actions/compare/v2.9...v2.10
+[2.9.0]: https://github.com/fbrehm/actions/compare/v2.8...v2.9
+[2.8.0]: https://github.com/fbrehm/actions/compare/v2.7...v2.8
+[2.7.0]: https://github.com/fbrehm/actions/compare/v2.6...v2.7
+[2.6.0]: https://github.com/fbrehm/actions/compare/v2.5...v2.6
+[2.5.0]: https://github.com/fbrehm/actions/compare/v2.4...v2.5
 [2.4.0]: https://github.com/fbrehm/actions/compare/v2.3...v2.4
 [2.3.0]: https://github.com/fbrehm/actions/compare/v2.2...v2.3
 [2.2.0]: https://github.com/fbrehm/actions/compare/v2.1...v2.2
